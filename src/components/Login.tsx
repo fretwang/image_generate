@@ -1,22 +1,30 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, User, Sparkles } from 'lucide-react';
+import { Mail, Lock, User, Sparkles, Eye, EyeOff } from 'lucide-react';
+import GoogleLoginButton from './GoogleLoginButton';
+import VerificationCodeInput from './VerificationCodeInput';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 const Login: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<'login' | 'register' | 'verify'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
-  const { login, register, isLoading } = useAuth();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
+  
+  const { login, register, verifyEmail, googleLogin, isLoading } = useAuth();
 
   const validatePasswords = () => {
-    if (!isLogin && password !== confirmPassword) {
+    if (mode === 'register' && password !== confirmPassword) {
       setPasswordError('两次输入的密码不一致');
       return false;
     }
-    if (!isLogin && password.length < 6) {
+    if (mode === 'register' && password.length < 6) {
       setPasswordError('密码长度至少6位');
       return false;
     }
@@ -27,14 +35,26 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validatePasswords()) {
+    if (mode === 'register' && !validatePasswords()) {
       return;
     }
     
-    if (isLogin) {
+    if (mode === 'login') {
       await login(email, password);
-    } else {
-      await register(email, password, name);
+    } else if (mode === 'register') {
+      const success = await register(email, password, name);
+      if (success) {
+        setPendingEmail(email);
+        setMode('verify');
+      }
+    }
+  };
+
+  const handleVerificationComplete = async (code: string) => {
+    const success = await verifyEmail(pendingEmail, code);
+    if (success) {
+      setMode('login');
+      setPendingEmail('');
     }
   };
 
@@ -52,6 +72,41 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    await googleLogin();
+  };
+
+  if (mode === 'verify') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-4">
+              <Mail className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">验证邮箱</h1>
+            <p className="text-gray-600">我们已向 {pendingEmail} 发送验证码</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <VerificationCodeInput
+              onComplete={handleVerificationComplete}
+              onResend={() => register(pendingEmail, password, name)}
+              email={pendingEmail}
+            />
+            
+            <button
+              onClick={() => setMode('register')}
+              className="w-full mt-4 text-gray-500 hover:text-gray-700 text-sm"
+            >
+              返回注册
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -67,35 +122,47 @@ const Login: React.FC = () => {
           <div className="flex mb-6">
             <button
               type="button"
-              onClick={() => setIsLogin(true)}
+              onClick={() => setMode('login')}
               className={`flex-1 py-2 text-center rounded-lg transition-colors ${
-                isLogin
+                mode === 'login'
                   ? 'bg-blue-100 text-blue-700 font-medium'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Login
+              登录
             </button>
             <button
               type="button"
-              onClick={() => setIsLogin(false)}
+              onClick={() => setMode('register')}
               className={`flex-1 py-2 text-center rounded-lg transition-colors ${
-                !isLogin
+                mode === 'register'
                   ? 'bg-blue-100 text-blue-700 font-medium'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Register
+              注册
             </button>
           </div>
 
+          {/* Google Login */}
+          <GoogleLoginButton onClick={handleGoogleLogin} isLoading={isLoading} />
+          
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">或使用邮箱</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {mode === 'register' && (
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Full name"
+                  placeholder="姓名"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -108,7 +175,7 @@ const Login: React.FC = () => {
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="email"
-                placeholder="Email address"
+                placeholder="邮箱地址"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -119,30 +186,44 @@ const Login: React.FC = () => {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                type="password"
-                placeholder="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="密码"
                 value={password}
                 onChange={(e) => handlePasswordChange(e.target.value)}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   passwordError ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
 
-            {!isLogin && (
+            {mode === 'register' && (
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type="password"
-                  placeholder="Confirm Password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="确认密码"
                   value={confirmPassword}
                   onChange={(e) => handleConfirmPasswordChange(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     passwordError ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             )}
 
@@ -153,12 +234,24 @@ const Login: React.FC = () => {
               </div>
             )}
 
+            {mode === 'login' && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  忘记密码？
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+              {isLoading ? '处理中...' : (mode === 'login' ? '登录' : '注册')}
             </button>
           </form>
 
@@ -167,6 +260,11 @@ const Login: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
+      )}
     </div>
   );
 };
