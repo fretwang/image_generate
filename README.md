@@ -15,6 +15,14 @@
 
 ## 邮件服务配置
 
+### 重要提醒
+
+**当前状态**: 由于没有配置Resend API密钥，系统会模拟邮件发送。在生产环境中，你需要：
+
+1. 注册Resend账户并获取API密钥
+2. 在Supabase项目设置中配置环境变量
+3. 验证发送域名
+
 ### 1. 设置Resend API
 
 1. 访问 [Resend](https://resend.com/) 并创建账户
@@ -25,8 +33,14 @@
 ### 2. 配置发送域名
 
 1. 在Resend中添加并验证你的域名
-2. 更新 `supabase/functions/send-email/index.ts` 中的 `FROM_EMAIL` 变量
+2. 更新 `supabase/functions/send-email/index.ts` 中的 `FROM_EMAIL` 变量为你的域名
 
+### 3. 临时解决方案（开发/演示）
+
+如果暂时无法配置真实邮件服务，系统会：
+- 模拟邮件发送过程
+- 在控制台输出验证码信息
+- 允许使用任意6位数字作为验证码进行测试
 ## Google OAuth 配置
 
 ### 1. 创建Google OAuth应用

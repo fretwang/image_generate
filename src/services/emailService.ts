@@ -22,6 +22,7 @@ export const generateVerificationCode = (): string => {
 // 发送邮件
 export const sendEmail = async (request: SendEmailRequest): Promise<SendEmailResponse> => {
   try {
+    console.log('Sending email request:', { ...request, code: '[HIDDEN]' });
 
     const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
     
@@ -37,9 +38,11 @@ export const sendEmail = async (request: SendEmailRequest): Promise<SendEmailRes
     const result = await response.json();
 
     if (!response.ok) {
+      console.error('Email API error:', result);
       throw new Error(result.error || 'Failed to send email');
     }
 
+    console.log('Email sent successfully:', result);
     return result;
   } catch (error) {
     console.error('Email service error:', error);
@@ -54,6 +57,7 @@ export const sendEmail = async (request: SendEmailRequest): Promise<SendEmailRes
 // 发送验证码邮件
 export const sendVerificationEmail = async (email: string, name?: string): Promise<{ success: boolean; code?: string; error?: string }> => {
   try {
+    console.log('Generating verification code for:', email);
     const code = generateVerificationCode();
     
     const result = await sendEmail({
@@ -64,8 +68,10 @@ export const sendVerificationEmail = async (email: string, name?: string): Promi
     });
 
     if (result.success) {
+      console.log('Verification email sent successfully');
       return { success: true, code };
     } else {
+      console.error('Failed to send verification email:', result);
       return { success: false, error: result.error || result.message };
     }
   } catch (error) {

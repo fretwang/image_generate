@@ -189,6 +189,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      console.log('Resending verification email to:', email);
       // Check if user exists
       const user = await userService.getUserByEmail(email);
       if (!user) {
@@ -207,6 +208,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const emailResult = await sendVerificationEmail(email, user.name);
       
       if (emailResult.success && emailResult.code) {
+        console.log('Email sent, storing verification code...');
         // Store verification code in database
         await storeVerificationCode(email, emailResult.code, 'verification');
         console.log('Verification email resent successfully');
@@ -214,11 +216,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       } else {
         console.error('Failed to resend verification email:', emailResult.error);
-        alert('重发验证邮件失败，请稍后重试');
+        alert(`重发验证邮件失败: ${emailResult.error || '未知错误'}`);
       }
     } catch (error) {
       console.error('Resend verification email error:', error);
-      alert('重发验证邮件失败，请稍后重试');
+      alert(`重发验证邮件失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
     
     setIsLoading(false);
