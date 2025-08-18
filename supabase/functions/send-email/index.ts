@@ -29,7 +29,7 @@ interface EmailRequest {
 }
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const FROM_EMAIL = 'noreply@tupian.life' // 使用你的域名
+const FROM_EMAIL = 'noreply@tupian.life'
 
 serve(async (req) => {
   // Handle CORS preflight requests
