@@ -12,23 +12,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables');
   console.error('VITE_SUPABASE_URL:', supabaseUrl);
   console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '[SET]' : '[MISSING]');
+  throw new Error('Supabase configuration is missing. Please check your environment variables.');
 }
 
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false
+  }
+});
 
 // Test connection
-if (supabase) {
-  supabase.from('users').select('count', { count: 'exact', head: true })
-    .then(({ error, count }) => {
-      if (error) {
-        console.error('Supabase connection test failed:', error);
-      } else {
-        console.log('Supabase connected successfully. Users table count:', count);
-      }
-    });
-}
 
 // Database types
 export interface User {

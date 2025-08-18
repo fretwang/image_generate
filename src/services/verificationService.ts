@@ -17,10 +17,6 @@ export const storeVerificationCode = async (
   type: 'verification' | 'password_reset'
 ): Promise<boolean> => {
   try {
-    if (!supabase) {
-      console.error('Supabase not initialized');
-      return false;
-    }
 
     // 设置过期时间为10分钟后
     const expiresAt = new Date();
@@ -63,10 +59,6 @@ export const verifyCode = async (
   type: 'verification' | 'password_reset'
 ): Promise<boolean> => {
   try {
-    if (!supabase) {
-      console.error('Supabase not initialized');
-      return false;
-    }
 
     // 查找验证码
     const { data, error } = await supabase
@@ -113,9 +105,6 @@ export const verifyCode = async (
 // 清理过期的验证码
 export const cleanupExpiredCodes = async (): Promise<void> => {
   try {
-    if (!supabase) {
-      return;
-    }
 
     const now = new Date().toISOString();
     

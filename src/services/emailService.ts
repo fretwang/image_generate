@@ -22,9 +22,6 @@ export const generateVerificationCode = (): string => {
 // 发送邮件
 export const sendEmail = async (request: SendEmailRequest): Promise<SendEmailResponse> => {
   try {
-    if (!supabase) {
-      throw new Error('Supabase not initialized');
-    }
 
     const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
     

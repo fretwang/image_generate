@@ -13,6 +13,11 @@ export interface CreateUserData {
 export const userService = {
   // Create new user
   async createUser(userData: CreateUserData): Promise<User | null> {
+    if (!supabase) {
+      console.error('Supabase not initialized');
+      return null;
+    }
+
     try {
       console.log('Creating user with data:', { ...userData, password_hash: '[HIDDEN]' });
       
@@ -69,11 +74,6 @@ export const userService = {
 
   // Get user by email
   async getUserByEmail(email: string): Promise<User | null> {
-    if (!supabase) {
-      console.error('Supabase not initialized');
-      return null;
-    }
-    
     try {
       console.log('Getting user by email:', email);
       
@@ -87,7 +87,7 @@ export const userService = {
         if (error.code !== 'PGRST116') { // PGRST116 is "not found" error
           console.error('Error getting user by email:', error);
         }
-          console.log('User not found with email:', email);
+        console.log('User not found with email:', email);
         return null;
       }
 
