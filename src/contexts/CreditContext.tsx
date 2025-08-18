@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { creditService } from '../services/creditService';
+import type { Transaction as DBTransaction } from '../lib/supabase';
 
 interface Transaction {
   id: string;
@@ -27,52 +30,100 @@ export const useCredit = () => {
 };
 
 export const CreditProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [credits, setCredits] = useState(100); // Start with 100 credits
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      type: 'recharge',
-      amount: 100,
-      description: 'Initial bonus credits',
-      timestamp: new Date()
-    }
-  ]);
+  const [credits, setCredits] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
+
+  // Load user credits and transactions when user changes
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    } else {
+      setCredits(0);
+      setTransactions([]);
+    }
+  }, [user]);
+
+  const loadUserData = async () => {
+    if (!user) return;
+
+    try {
+      // Load credits
+      const userCredits = await creditService.getUserCredits(user.id);
+      setCredits(userCredits);
+
+      // Load transactions
+      const userTransactions = await creditService.getUserTransactions(user.id);
+      const formattedTransactions: Transaction[] = userTransactions.map((t: DBTransaction) => ({
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        description: t.description,
+        timestamp: new Date(t.created_at)
+      }));
+      setTransactions(formattedTransactions);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
 
   const recharge = async (amount: number, paymentMethod: string): Promise<boolean> => {
+    if (!user) return false;
+
     setIsProcessing(true);
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const creditsToAdd = amount * 10; // 1 yuan = 10 credits
-    setCredits(prev => prev + creditsToAdd);
-    
-    const transaction: Transaction = {
-      id: Date.now().toString(),
-      type: 'recharge',
-      amount: creditsToAdd,
-      description: `Recharged ¥${amount} via ${paymentMethod}`,
-      timestamp: new Date()
-    };
-    
-    setTransactions(prev => [transaction, ...prev]);
-    setIsProcessing(false);
-    return true;
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const success = await creditService.rechargeCredits(user.id, amount, paymentMethod);
+      
+      if (success) {
+        // Reload user data to get updated credits and transactions
+        await loadUserData();
+      }
+      
+      setIsProcessing(false);
+      return success;
+    } catch (error) {
+      console.error('Recharge error:', error);
+      setIsProcessing(false);
+      return false;
+    }
   };
 
   const consume = (amount: number, description: string): boolean => {
+    if (!user) return false;
+
     if (credits >= amount) {
+      // Optimistically update UI
       setCredits(prev => prev - amount);
       
-      const transaction: Transaction = {
-        id: Date.now().toString(),
-        type: 'consume',
-        amount: -amount,
-        description,
-        timestamp: new Date()
-      };
+      // Update database in background
+      creditService.consumeCredits(user.id, amount, description)
+        .then(success => {
+          if (success) {
+            // Add transaction to local state
+            const transaction: Transaction = {
+              id: Date.now().toString(),
+              type: 'consume',
+              amount: -amount,
+              description,
+              timestamp: new Date()
+            };
+            setTransactions(prev => [transaction, ...prev]);
+          } else {
+            // Revert optimistic update if failed
+            setCredits(prev => prev + amount);
+          }
+        })
+        .catch(error => {
+          console.error('Consume credits error:', error);
+          // Revert optimistic update
+          setCredits(prev => prev + amount);
+        });
       
-      setTransactions(prev => [transaction, ...prev]);
       return true;
     }
     return false;
