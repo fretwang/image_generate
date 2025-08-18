@@ -91,8 +91,8 @@ const Login: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <VerificationCodeInput
               onComplete={handleVerificationComplete}
-              onResend={() => register(pendingEmail, password, name)}
               email={pendingEmail}
+              name={name}
             />
             
             <button
@@ -102,10 +102,6 @@ const Login: React.FC = () => {
               返回注册
             </button>
             
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
-              <p className="font-medium mb-1">演示说明：</p>
-              <p>这是演示版本，请输入任意6位数字作为验证码（如：123456）</p>
-            </div>
           </div>
         </div>
       </div>
@@ -261,7 +257,7 @@ const Login: React.FC = () => {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            演示应用 - 使用任意邮箱/密码即可继续
+            请使用真实邮箱注册以接收验证码
           </div>
         </div>
       </div>

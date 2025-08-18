@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { buildGoogleAuthUrl, storeState } from '../config/google';
 import { exchangeCodeForTokens, getUserInfo, verifyIdToken } from '../services/googleAuth';
 import { userService } from '../services/userService';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService';
+import { storeVerificationCode, verifyCode } from '../services/verificationService';
 import { supabase } from '../lib/supabase';
 import type { User as DBUser } from '../lib/supabase';
 
@@ -39,6 +41,11 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingVerificationData, setPendingVerificationData] = useState<{
+    email: string;
+    code: string;
+    type: 'verification' | 'password_reset';
+  } | null>(null);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -103,6 +110,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (newUser) {
         console.log('User created successfully:', newUser.id);
         setIsLoading(false);
+        // Send verification email
+        const emailResult = await sendVerificationEmail(email, name);
+        
+        if (emailResult.success && emailResult.code) {
+          // Store verification code in database
+          await storeVerificationCode(email, emailResult.code, 'verification');
+          console.log('Verification email sent successfully');
+        } else {
+          console.error('Failed to send verification email:', emailResult.error);
+          alert('注册成功，但发送验证邮件失败。请稍后重试。');
+        }
+        
         return true;
       } else {
         console.error('Failed to create user');
@@ -123,8 +142,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Verifying email for:', email, 'with code:', code);
       
-      // Demo verification - any 6-digit code works (in production, verify against sent code)
-      if (code.length === 6) {
+      // Verify code against database
+      const isValidCode = await verifyCode(email, code, 'verification');
+      
+      if (isValidCode) {
         const dbUser = await userService.getUserByEmail(email);
         if (dbUser) {
           console.log('Verifying user email in database...');
@@ -149,8 +170,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return true;
         }
       } else {
-        console.log('Invalid verification code length');
-        alert('验证码格式错误，请输入6位数字');
+        console.log('Invalid verification code');
+        alert('验证码错误或已过期，请重新获取');
       }
     } catch (error) {
       console.error('Email verification error:', error);
@@ -264,28 +285,84 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const sendResetCode = async (email: string): Promise<boolean> => {
     setIsLoading(true);
-    // Simulate sending reset code
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    try {
+      // Check if user exists
+      const user = await userService.getUserByEmail(email);
+      if (!user) {
+        alert('该邮箱未注册');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Send password reset email
+      const emailResult = await sendPasswordResetEmail(email);
+      
+      if (emailResult.success && emailResult.code) {
+        // Store verification code in database
+        await storeVerificationCode(email, emailResult.code, 'password_reset');
+        console.log('Password reset email sent successfully');
+        setIsLoading(false);
+        return true;
+      } else {
+        console.error('Failed to send password reset email:', emailResult.error);
+        alert('发送重置邮件失败，请稍后重试');
+      }
+    } catch (error) {
+      console.error('Send reset code error:', error);
+      alert('发送重置邮件失败，请稍后重试');
+    }
+    
     setIsLoading(false);
-    return true;
+    return false;
   };
 
   const verifyResetCode = async (email: string, code: string): Promise<boolean> => {
     setIsLoading(true);
-    // Simulate code verification
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    // Any 6-digit code works for demo
-    return code.length === 6;
+    
+    try {
+      // Verify code against database
+      const isValidCode = await verifyCode(email, code, 'password_reset');
+      setIsLoading(false);
+      return isValidCode;
+    } catch (error) {
+      console.error('Verify reset code error:', error);
+      setIsLoading(false);
+      return false;
+    }
   };
 
   const resetPassword = async (email: string, newPassword: string): Promise<boolean> => {
     setIsLoading(true);
-    // Simulate password reset
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    try {
+      // Get user by email
+      const user = await userService.getUserByEmail(email);
+      if (!user) {
+        alert('用户不存在');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Update password (in production, hash the password)
+      const success = await userService.updateUser(user.id, {
+        password_hash: newPassword
+      });
+
+      if (success) {
+        console.log('Password reset successfully');
+        setIsLoading(false);
+        return true;
+      } else {
+        alert('密码重置失败，请稍后重试');
+      }
+    } catch (error) {
+      console.error('Reset password error:', error);
+      alert('密码重置失败，请稍后重试');
+    }
     
     setIsLoading(false);
-    return true;
+    return false;
   };
 
   const logout = () => {

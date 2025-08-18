@@ -1,16 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { sendVerificationEmail } from '../services/emailService';
+import { storeVerificationCode } from '../services/verificationService';
 
 interface VerificationCodeInputProps {
   onComplete: (code: string) => void;
-  onResend: () => void;
+  onResend?: () => void;
   email: string;
+  name?: string;
 }
 
 const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
   onComplete,
   onResend,
-  email
+  email,
+  name
 }) => {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isResending, setIsResending] = useState(false);
@@ -64,7 +68,27 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
 
   const handleResend = async () => {
     setIsResending(true);
-    await onResend();
+    
+    try {
+      if (onResend) {
+        await onResend();
+      } else {
+        // Default resend logic for verification emails
+        const emailResult = await sendVerificationEmail(email, name);
+        
+        if (emailResult.success && emailResult.code) {
+          await storeVerificationCode(email, emailResult.code, 'verification');
+          console.log('Verification email resent successfully');
+        } else {
+          console.error('Failed to resend verification email:', emailResult.error);
+          alert('重发邮件失败，请稍后重试');
+        }
+      }
+    } catch (error) {
+      console.error('Resend error:', error);
+      alert('重发邮件失败，请稍后重试');
+    }
+    
     setIsResending(false);
     setCountdown(60);
     setCanResend(false);
@@ -115,9 +139,9 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
 
       <div className="text-xs text-center">
         <p className="text-gray-500 mb-2">验证码已发送至 {email}</p>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
-          <p className="text-yellow-700 font-medium">演示提示：</p>
-          <p className="text-yellow-600">输入任意6位数字即可验证（如：123456）</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+          <p className="text-blue-700 font-medium">邮件提示：</p>
+          <p className="text-blue-600">请检查您的邮箱（包括垃圾邮件文件夹）</p>
         </div>
       </div>
     </div>
