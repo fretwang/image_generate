@@ -16,9 +16,13 @@ export const userService = {
     try {
       console.log('Creating user with data:', { ...userData, password_hash: '[HIDDEN]' });
       
+      // Generate a UUID for the new user
+      const userId = crypto.randomUUID();
+      const userDataWithId = { ...userData, id: userId };
+      
       const { data, error } = await supabase
         .from('users')
-        .insert([userData])
+        .insert([userDataWithId])
         .select()
         .single();
 
@@ -33,7 +37,7 @@ export const userService = {
       const { error: creditsError } = await supabase
         .from('credits')
         .insert([{
-          user_id: data.id,
+          user_id: userId,
           balance: 100 // Initial bonus credits
         }]);
 
@@ -46,7 +50,7 @@ export const userService = {
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert([{
-          user_id: data.id,
+          user_id: userId,
           type: 'recharge',
           amount: 100,
           description: 'Initial bonus credits'
