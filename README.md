@@ -6,9 +6,24 @@
 
 - 🎨 AI图像生成 - 通过文本描述生成图像
 - 👤 用户认证系统 - 支持邮箱注册/登录和Google OAuth
+- 📧 真实邮件发送 - 验证码和密码重置邮件
 - 💰 积分系统 - 基于积分的使用计费
 - 🖼️ 图片画廊 - 查看和管理生成的图像
 - 📱 响应式设计 - 支持移动端和桌面端
+
+## 邮件服务配置
+
+### 1. 设置Resend API
+
+1. 访问 [Resend](https://resend.com/) 并创建账户
+2. 在Dashboard中创建API Key
+3. 在Supabase项目设置中添加环境变量：
+   - `RESEND_API_KEY`: 你的Resend API密钥
+
+### 2. 配置发送域名
+
+1. 在Resend中添加并验证你的域名
+2. 更新 `supabase/functions/send-email/index.ts` 中的 `FROM_EMAIL` 变量
 
 ## Google OAuth 配置
 
@@ -58,6 +73,8 @@ npm run build
 ## 技术栈
 
 - **前端**: React + TypeScript + Tailwind CSS
+- **邮件服务**: Resend API
+- **后端**: Supabase Edge Functions
 - **认证**: Google OAuth 2.0
 - **状态管理**: React Context
 - **图标**: Lucide React
@@ -65,12 +82,20 @@ npm run build
 
 ## 注意事项
 
-1. **安全性**: Client Secret应该在生产环境中通过服务端处理，不应暴露在前端代码中
-2. **HTTPS**: 生产环境必须使用HTTPS，Google OAuth要求安全连接
-3. **域名验证**: 确保重定向URI与Google Console中配置的完全匹配
-4. **令牌管理**: 访问令牌有过期时间，建议实现刷新令牌机制
+1. **邮件配置**: 需要配置Resend API密钥才能发送真实邮件
+2. **域名验证**: 生产环境需要验证发送邮件的域名
+3. **安全性**: Client Secret应该在生产环境中通过服务端处理，不应暴露在前端代码中
+4. **HTTPS**: 生产环境必须使用HTTPS，Google OAuth要求安全连接
+5. **域名验证**: 确保重定向URI与Google Console中配置的完全匹配
+6. **令牌管理**: 访问令牌有过期时间，建议实现刷新令牌机制
 
 ## 故障排除
+
+### 邮件发送失败
+1. 检查Resend API密钥是否正确配置
+2. 确认发送域名已在Resend中验证
+3. 检查邮件是否被归类为垃圾邮件
+4. 查看Supabase Edge Function日志
 
 ### Google登录失败
 1. 检查Client ID和Client Secret是否正确
