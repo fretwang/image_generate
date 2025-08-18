@@ -11,39 +11,53 @@ const GoogleAuthCallback: React.FC = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log('Processing Google OAuth callback...');
-        console.log('Current URL:', window.location.href);
+        console.log('GoogleAuthCallback: Processing callback...');
+        console.log('GoogleAuthCallback: Current URL:', window.location.href);
+        console.log('GoogleAuthCallback: Pathname:', window.location.pathname);
+        console.log('GoogleAuthCallback: Search:', window.location.search);
         
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         const state = urlParams.get('state');
         const error = urlParams.get('error');
 
-        console.log('OAuth params:', { code: !!code, state: !!state, error });
+        console.log('GoogleAuthCallback: OAuth params:', { 
+          code: code ? code.substring(0, 20) + '...' : null, 
+          state: state ? state.substring(0, 10) + '...' : null, 
+          error 
+        });
+        
         if (error) {
           throw new Error(`Google OAuth error: ${error}`);
         }
 
         if (!code) {
+          console.log('GoogleAuthCallback: No code found, checking if we should wait...');
+          // 如果没有code但在callback路径，可能需要等待
+          if (window.location.pathname === '/auth/callback') {
+            console.log('GoogleAuthCallback: On callback path but no code, waiting...');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+            return;
+          }
           throw new Error('No authorization code received');
         }
 
-        // 暂时跳过state验证，因为可能存在跨域问题
-        console.log('State validation skipped for debugging');
+        console.log('GoogleAuthCallback: State validation skipped for debugging');
 
-        // 处理Google回调
-        console.log('Calling handleGoogleCallback...');
+        console.log('GoogleAuthCallback: Calling handleGoogleCallback...');
         await handleGoogleCallback(code);
         setStatus('success');
         
-        // 清理URL参数并重定向到主页
+        console.log('GoogleAuthCallback: Success! Redirecting to home...');
         setTimeout(() => {
           window.history.replaceState({}, document.title, '/');
           window.location.reload();
         }, 1000);
         
       } catch (err) {
-        console.error('Google auth callback error:', err);
+        console.error('GoogleAuthCallback: Error:', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         setStatus('error');
       }

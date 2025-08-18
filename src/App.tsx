@@ -17,13 +17,24 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const { user } = useAuth();
 
-  // 检查是否是Google OAuth回调
+  // 检查是否是Google OAuth回调 - 检查URL参数和路径
   const urlParams = new URLSearchParams(window.location.search);
+  const currentPath = window.location.pathname;
   const hasAuthCode = urlParams.has('code') && urlParams.has('state');
-  const isGoogleCallback = hasAuthCode;
+  const isCallbackPath = currentPath === '/auth/callback';
+  const isGoogleCallback = hasAuthCode || isCallbackPath;
 
-  // 如果URL中有Google OAuth的code和state参数，显示回调处理组件
+  console.log('App routing check:', {
+    currentPath,
+    hasAuthCode,
+    isCallbackPath,
+    isGoogleCallback,
+    searchParams: window.location.search
+  });
+
+  // 如果是Google OAuth回调，显示回调处理组件
   if (isGoogleCallback) {
+    console.log('Rendering GoogleAuthCallback component');
     return <GoogleAuthCallback />;
   }
 
