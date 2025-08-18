@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, name: string) => Promise<boolean>;
   verifyEmail: (email: string, code: string) => Promise<boolean>;
+  resendVerificationEmail: (email: string) => Promise<boolean>;
   googleLogin: () => Promise<boolean>;
   handleGoogleCallback: (code: string) => Promise<boolean>;
   sendResetCode: (email: string) => Promise<boolean>;
@@ -69,7 +70,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       } else if (dbUser && !dbUser.email_verified) {
         console.log('User found but not verified');
-        alert('请先验证您的邮箱地址');
+        // 返回特殊状态，让前端处理未验证的情况
+        setIsLoading(false);
+        return 'unverified' as any; // 返回特殊状态
       } else {
         console.log('User not found or invalid credentials');
         alert('邮箱或密码错误');
@@ -176,6 +179,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error('Email verification error:', error);
       alert('验证失败，请稍后重试');
+    }
+    
+    setIsLoading(false);
+    return false;
+  };
+
+  const resendVerificationEmail = async (email: string): Promise<boolean> => {
+    setIsLoading(true);
+    
+    try {
+      // Check if user exists
+      const user = await userService.getUserByEmail(email);
+      if (!user) {
+        alert('该邮箱未注册');
+        setIsLoading(false);
+        return false;
+      }
+
+      if (user.email_verified) {
+        alert('该邮箱已经验证过了，可以直接登录');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Send verification email
+      const emailResult = await sendVerificationEmail(email, user.name);
+      
+      if (emailResult.success && emailResult.code) {
+        // Store verification code in database
+        await storeVerificationCode(email, emailResult.code, 'verification');
+        console.log('Verification email resent successfully');
+        setIsLoading(false);
+        return true;
+      } else {
+        console.error('Failed to resend verification email:', emailResult.error);
+        alert('重发验证邮件失败，请稍后重试');
+      }
+    } catch (error) {
+      console.error('Resend verification email error:', error);
+      alert('重发验证邮件失败，请稍后重试');
     }
     
     setIsLoading(false);
@@ -375,6 +418,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       login, 
       register, 
       verifyEmail, 
+      resendVerificationEmail,
       googleLogin, 
       handleGoogleCallback,
       sendResetCode, 

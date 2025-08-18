@@ -141,7 +141,11 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
         <p className="text-gray-500 mb-2">验证码已发送至 {email}</p>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
           <p className="text-blue-700 font-medium">邮件提示：</p>
-          <p className="text-blue-600">请检查您的邮箱（包括垃圾邮件文件夹）</p>
+          <p className="text-blue-600 text-xs">
+            • 请检查您的邮箱（包括垃圾邮件文件夹）<br/>
+            • 验证码有效期为10分钟<br/>
+            • 如果长时间未收到，请点击重新发送
+          </p>
         </div>
       </div>
     </div>

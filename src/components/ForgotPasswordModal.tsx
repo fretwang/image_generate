@@ -74,6 +74,9 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose }) =>
                   required
                 />
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                我们将向此邮箱发送密码重置验证码
+              </p>
             </div>
             
             <button
@@ -90,6 +93,11 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose }) =>
                 '发送验证码'
               )}
             </button>
+            
+            <div className="text-xs text-center text-gray-500 space-y-1">
+              <p>💡 没有收到邮件？请检查垃圾邮件文件夹</p>
+              <p>验证码有效期为10分钟</p>
+            </div>
           </form>
         );
 
