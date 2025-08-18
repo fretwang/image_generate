@@ -19,7 +19,8 @@ function AppContent() {
 
   // 检查是否是Google OAuth回调
   const urlParams = new URLSearchParams(window.location.search);
-  const isGoogleCallback = urlParams.has('code') && urlParams.has('state');
+  const currentPath = window.location.pathname;
+  const isGoogleCallback = (currentPath === '/auth/callback' || urlParams.has('code')) && urlParams.has('state');
 
   if (isGoogleCallback) {
     return <GoogleAuthCallback />;
