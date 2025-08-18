@@ -113,8 +113,12 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
         </button>
       </div>
 
-      <div className="text-xs text-gray-500 text-center">
-        验证码已发送至 {email}
+      <div className="text-xs text-center">
+        <p className="text-gray-500 mb-2">验证码已发送至 {email}</p>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+          <p className="text-yellow-700 font-medium">演示提示：</p>
+          <p className="text-yellow-600">输入任意6位数字即可验证（如：123456）</p>
+        </div>
       </div>
     </div>
   );

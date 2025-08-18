@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Verifying email for:', email, 'with code:', code);
       
-      // Mock successful verification - any 6-digit code works
+      // Demo verification - any 6-digit code works (in production, verify against sent code)
       if (code.length === 6) {
         const dbUser = await userService.getUserByEmail(email);
         if (dbUser) {
@@ -150,7 +150,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       } else {
         console.log('Invalid verification code length');
-        alert('请输入6位验证码');
+        alert('验证码格式错误，请输入6位数字');
       }
     } catch (error) {
       console.error('Email verification error:', error);

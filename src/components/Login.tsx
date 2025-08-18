@@ -101,6 +101,11 @@ const Login: React.FC = () => {
             >
               返回注册
             </button>
+            
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+              <p className="font-medium mb-1">演示说明：</p>
+              <p>这是演示版本，请输入任意6位数字作为验证码（如：123456）</p>
+            </div>
           </div>
         </div>
       </div>
