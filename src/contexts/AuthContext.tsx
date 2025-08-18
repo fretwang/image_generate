@@ -128,14 +128,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      console.log('handleGoogleCallback called with code:', code.substring(0, 20) + '...');
+      
       // 交换授权码获取令牌
+      console.log('Exchanging code for tokens...');
       const tokens = await exchangeCodeForTokens(code);
+      console.log('Tokens received:', !!tokens.access_token);
       
       // 验证ID Token
+      console.log('Verifying ID token...');
       const idTokenPayload = verifyIdToken(tokens.id_token);
+      console.log('ID token verified:', !!idTokenPayload);
       
       // 获取用户信息
+      console.log('Getting user info...');
       const userInfo = await getUserInfo(tokens.access_token);
+      console.log('User info received:', userInfo.email);
       
       // 设置用户信息
       setUser({
@@ -151,6 +159,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('google_refresh_token', tokens.refresh_token);
       }
       
+      console.log('Google login successful!');
       setIsLoading(false);
       return true;
       
