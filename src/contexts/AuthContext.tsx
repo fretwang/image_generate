@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { buildGoogleAuthUrl, storeState } from '../config/google';
+import { exchangeCodeForTokens, getUserInfo, verifyIdToken } from '../services/googleAuth';
 
 interface User {
   id: string;
@@ -13,6 +15,7 @@ interface AuthContextType {
   register: (email: string, password: string, name: string) => Promise<boolean>;
   verifyEmail: (email: string, code: string) => Promise<boolean>;
   googleLogin: () => Promise<boolean>;
+  handleGoogleCallback: (code: string) => Promise<boolean>;
   sendResetCode: (email: string) => Promise<boolean>;
   verifyResetCode: (email: string, code: string) => Promise<boolean>;
   resetPassword: (email: string, newPassword: string) => Promise<boolean>;
@@ -84,19 +87,78 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const googleLogin = async (): Promise<boolean> => {
     setIsLoading(true);
-    // Simulate Google OAuth flow
-    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Mock successful Google login
-    setUser({
-      id: 'google-1',
-      email: 'user@gmail.com',
-      name: 'Google User',
-      avatar: `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
-    });
+    try {
+      // 检查Google配置
+      if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        console.warn('Google Client ID not configured, using mock login');
+        // 模拟Google登录作为后备
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setUser({
+          id: 'google-mock-1',
+          email: 'user@gmail.com',
+          name: 'Google User',
+          avatar: `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
+        });
+        setIsLoading(false);
+        return true;
+      }
+
+      // 构建Google OAuth URL
+      const authUrl = buildGoogleAuthUrl();
+      const urlParams = new URLSearchParams(new URL(authUrl).search);
+      const state = urlParams.get('state');
+      
+      if (state) {
+        storeState(state);
+      }
+      
+      // 重定向到Google OAuth
+      window.location.href = authUrl;
+      return true;
+      
+    } catch (error) {
+      console.error('Google login error:', error);
+      setIsLoading(false);
+      return false;
+    }
+  };
+
+  const handleGoogleCallback = async (code: string): Promise<boolean> => {
+    setIsLoading(true);
     
-    setIsLoading(false);
-    return true;
+    try {
+      // 交换授权码获取令牌
+      const tokens = await exchangeCodeForTokens(code);
+      
+      // 验证ID Token
+      const idTokenPayload = verifyIdToken(tokens.id_token);
+      
+      // 获取用户信息
+      const userInfo = await getUserInfo(tokens.access_token);
+      
+      // 设置用户信息
+      setUser({
+        id: userInfo.id,
+        email: userInfo.email,
+        name: userInfo.name,
+        avatar: userInfo.picture
+      });
+      
+      // 存储令牌（可选）
+      localStorage.setItem('google_access_token', tokens.access_token);
+      if (tokens.refresh_token) {
+        localStorage.setItem('google_refresh_token', tokens.refresh_token);
+      }
+      
+      setIsLoading(false);
+      return true;
+      
+    } catch (error) {
+      console.error('Google callback error:', error);
+      setIsLoading(false);
+      return false;
+    }
   };
 
   const sendResetCode = async (email: string): Promise<boolean> => {
@@ -136,6 +198,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       register, 
       verifyEmail, 
       googleLogin, 
+      handleGoogleCallback,
       sendResetCode, 
       verifyResetCode, 
       resetPassword, 

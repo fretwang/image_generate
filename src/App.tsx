@@ -9,12 +9,21 @@ import Generate from './components/Generate';
 import Gallery from './components/Gallery';
 import Profile from './components/Profile';
 import { useAuth } from './contexts/AuthContext';
+import GoogleAuthCallback from './components/GoogleAuthCallback';
 
 type Page = 'home' | 'generate' | 'gallery' | 'profile';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const { user } = useAuth();
+
+  // 检查是否是Google OAuth回调
+  const urlParams = new URLSearchParams(window.location.search);
+  const isGoogleCallback = urlParams.has('code') && urlParams.has('state');
+
+  if (isGoogleCallback) {
+    return <GoogleAuthCallback />;
+  }
 
   if (!user) {
     return <Login />;
