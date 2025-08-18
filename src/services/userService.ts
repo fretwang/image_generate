@@ -14,6 +14,8 @@ export const userService = {
   // Create new user
   async createUser(userData: CreateUserData): Promise<User | null> {
     try {
+      console.log('Creating user with data:', { ...userData, password_hash: '[HIDDEN]' });
+      
       const { data, error } = await supabase
         .from('users')
         .insert([userData])
@@ -22,19 +24,26 @@ export const userService = {
 
       if (error) {
         console.error('Error creating user:', error);
+        console.error('Error details:', error.message, error.details, error.hint);
         return null;
       }
 
+      console.log('User created, creating credits record...');
       // Create initial credits record
-      await supabase
+      const { error: creditsError } = await supabase
         .from('credits')
         .insert([{
           user_id: data.id,
           balance: 100 // Initial bonus credits
         }]);
 
+      if (creditsError) {
+        console.error('Error creating credits:', creditsError);
+      }
+
+      console.log('Creating initial transaction...');
       // Create initial transaction record
-      await supabase
+      const { error: transactionError } = await supabase
         .from('transactions')
         .insert([{
           user_id: data.id,
@@ -42,6 +51,10 @@ export const userService = {
           amount: 100,
           description: 'Initial bonus credits'
         }]);
+
+      if (transactionError) {
+        console.error('Error creating transaction:', transactionError);
+      }
 
       return data;
     } catch (error) {
@@ -53,6 +66,8 @@ export const userService = {
   // Get user by email
   async getUserByEmail(email: string): Promise<User | null> {
     try {
+      console.log('Getting user by email:', email);
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -60,7 +75,9 @@ export const userService = {
         .single();
 
       if (error) {
-        console.error('Error getting user by email:', error);
+        if (error.code !== 'PGRST116') { // PGRST116 is "not found" error
+          console.error('Error getting user by email:', error);
+        }
         return null;
       }
 
@@ -117,6 +134,8 @@ export const userService = {
   // Verify email
   async verifyEmail(userId: string): Promise<boolean> {
     try {
+      console.log('Verifying email for user:', userId);
+      
       const { error } = await supabase
         .from('users')
         .update({ email_verified: true })
@@ -127,6 +146,7 @@ export const userService = {
         return false;
       }
 
+      console.log('Email verified successfully');
       return true;
     } catch (error) {
       console.error('Error in verifyEmail:', error);

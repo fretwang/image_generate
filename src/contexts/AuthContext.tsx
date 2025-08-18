@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { buildGoogleAuthUrl, storeState } from '../config/google';
 import { exchangeCodeForTokens, getUserInfo, verifyIdToken } from '../services/googleAuth';
 import { userService } from '../services/userService';
+import { supabase } from '../lib/supabase';
 import type { User as DBUser } from '../lib/supabase';
 
 interface User {
@@ -43,10 +44,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      console.log('Attempting login for:', email);
+      
       // Get user from database
       const dbUser = await userService.getUserByEmail(email);
+      console.log('User found:', !!dbUser);
       
       if (dbUser && dbUser.email_verified) {
+        console.log('User verified, setting user state');
         setUser({
           id: dbUser.id,
           email: dbUser.email,
@@ -55,9 +60,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         setIsLoading(false);
         return true;
+      } else if (dbUser && !dbUser.email_verified) {
+        console.log('User found but not verified');
+        alert('请先验证您的邮箱地址');
+      } else {
+        console.log('User not found or invalid credentials');
+        alert('邮箱或密码错误');
       }
     } catch (error) {
       console.error('Login error:', error);
+      alert('登录失败，请稍后重试');
     }
     
     setIsLoading(false);
@@ -68,14 +80,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      console.log('Attempting registration for:', email);
+      
       // Check if user already exists
       const existingUser = await userService.getUserByEmail(email);
       if (existingUser) {
         console.error('User already exists');
+        alert('该邮箱已被注册');
         setIsLoading(false);
         return false;
       }
 
+      console.log('Creating new user...');
       // Create new user
       const newUser = await userService.createUser({
         email,
@@ -85,11 +101,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (newUser) {
+        console.log('User created successfully:', newUser.id);
         setIsLoading(false);
         return true;
+      } else {
+        console.error('Failed to create user');
+        alert('注册失败，请稍后重试');
       }
     } catch (error) {
       console.error('Registration error:', error);
+      alert('注册失败，请稍后重试');
     }
     
     setIsLoading(false);
@@ -100,13 +121,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      console.log('Verifying email for:', email, 'with code:', code);
+      
       // Mock successful verification - any 6-digit code works
       if (code.length === 6) {
         const dbUser = await userService.getUserByEmail(email);
         if (dbUser) {
+          console.log('Verifying user email in database...');
           // Verify email in database
-          await userService.verifyEmail(dbUser.id);
+          const success = await userService.verifyEmail(dbUser.id);
           
+          if (!success) {
+            console.error('Failed to verify email in database');
+            alert('验证失败，请稍后重试');
+            setIsLoading(false);
+            return false;
+          }
+          
+          console.log('Email verified, logging in user');
           setUser({
             id: dbUser.id,
             email: dbUser.email,
@@ -116,9 +148,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setIsLoading(false);
           return true;
         }
+      } else {
+        console.log('Invalid verification code length');
+        alert('请输入6位验证码');
       }
     } catch (error) {
       console.error('Email verification error:', error);
+      alert('验证失败，请稍后重试');
     }
     
     setIsLoading(false);

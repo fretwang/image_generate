@@ -1,9 +1,20 @@
 import { supabase } from '../lib/supabase';
 import type { Credits, Transaction } from '../lib/supabase';
 
+// Check if supabase is available
+const checkSupabase = () => {
+  if (!supabase) {
+    console.error('Supabase not initialized');
+    return false;
+  }
+  return true;
+};
+
 export const creditService = {
   // Get user credits
   async getUserCredits(userId: string): Promise<number> {
+    if (!checkSupabase()) return 0;
+    
     try {
       const { data, error } = await supabase
         .from('credits')
@@ -25,6 +36,8 @@ export const creditService = {
 
   // Get user transactions
   async getUserTransactions(userId: string): Promise<Transaction[]> {
+    if (!checkSupabase()) return [];
+    
     try {
       const { data, error } = await supabase
         .from('transactions')
@@ -46,6 +59,8 @@ export const creditService = {
 
   // Recharge credits
   async rechargeCredits(userId: string, amount: number, paymentMethod: string): Promise<boolean> {
+    if (!checkSupabase()) return false;
+    
     try {
       // Start a transaction
       const { data: currentCredits, error: fetchError } = await supabase
@@ -98,6 +113,8 @@ export const creditService = {
 
   // Consume credits
   async consumeCredits(userId: string, amount: number, description: string): Promise<boolean> {
+    if (!checkSupabase()) return false;
+    
     try {
       // Get current credits
       const { data: currentCredits, error: fetchError } = await supabase
