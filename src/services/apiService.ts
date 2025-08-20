@@ -126,14 +126,6 @@ class ApiService {
       logger.logApiError('GET', url, error);
       throw error;
     }
-  }</parameter>
-
-    
-    if (response.success && response.data?.token) {
-      this.saveToken(response.data.token);
-    }
-    
-    return response;
   }
 
   async sendVerificationEmail(email: string, type: 'verification' | 'password_reset', name?: string) {
