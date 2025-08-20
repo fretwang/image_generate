@@ -51,7 +51,7 @@
 4. 创建OAuth 2.0客户端ID凭据
 5. 设置授权重定向URI：
    - 开发环境: `http://localhost:5173/auth/callback`
-   - 生产环境: `https://yourdomain.com/auth/callback`
+   - 生产环境: `https://tupian.life/auth/callback`
 
 ### 2. 配置环境变量
 
@@ -60,7 +60,7 @@
 ```bash
 VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
 VITE_GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/auth/callback
+VITE_GOOGLE_REDIRECT_URI=https://tupian.life/auth/callback
 ```
 
 ### 3. 获取Google OAuth凭据
