@@ -94,10 +94,40 @@ class ApiService {
   }
 
   async googleLogin(code: string, state: string) {
-    const response = await this.request<{ user: any; token: string }>('/auth/google', {
-      method: 'POST',
-      body: JSON.stringify({ code, state }),
-    });
+    // 直接调用外部API而不是内部API
+    const url = `https://fretwang.com/api/auth/google?code=${encodeURIComponent(code)}`;
+    
+    logger.logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        logger.logApiError('GET', url, { status: response.status, data });
+        throw new Error(data.message || `HTTP ${response.status}`);
+      }
+
+      logger.debug(`Google OAuth API请求成功`, { status: response.status });
+      
+      // 如果返回了token，保存它
+      if (data.success && data.data?.token) {
+        this.saveToken(data.data.token);
+      }
+      
+      return data;
+    } catch (error) {
+      logger.logApiError('GET', url, error);
+      throw error;
+    }
+  }</parameter>
+
     
     if (response.success && response.data?.token) {
       this.saveToken(response.data.token);
