@@ -50,8 +50,8 @@
 3. 启用 Google+ API 和 Gmail API
 4. 创建OAuth 2.0客户端ID凭据
 5. 设置授权重定向URI：
-   - 开发环境: `http://localhost:5173/auth/callback`
-   - 生产环境: `https://tupian.life/auth/callback`
+   - 开发环境: `http://localhost:5173`
+   - 生产环境: `https://tupian.life`
 
 ### 2. 配置环境变量
 

@@ -32,19 +32,8 @@ const GoogleAuthCallback: React.FC = () => {
         }
 
         if (!code) {
-          console.log('GoogleAuthCallback: No code found, checking if we should wait...');
-          // 如果没有code但在callback路径，可能需要等待
-          if (window.location.pathname === '/auth/callback') {
-            console.log('GoogleAuthCallback: On callback path but no code, waiting...');
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
-            return;
-          }
           throw new Error('No authorization code received');
         }
-
-        console.log('GoogleAuthCallback: State validation skipped for debugging');
 
         console.log('GoogleAuthCallback: Calling handleGoogleCallback...');
         await handleGoogleCallback(code);
@@ -52,8 +41,9 @@ const GoogleAuthCallback: React.FC = () => {
         
         console.log('GoogleAuthCallback: Success! Redirecting to home...');
         setTimeout(() => {
-          window.history.replaceState({}, document.title, '/');
-          window.location.reload();
+          // 清理URL参数并重新加载
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.location.href = '/';
         }, 1000);
         
       } catch (err) {
