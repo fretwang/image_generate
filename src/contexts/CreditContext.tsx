@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { creditService } from '../services/creditService';
-import type { Transaction as DBTransaction } from '../lib/supabase';
+import apiService from '../services/apiService';
 
 interface Transaction {
   id: string;
@@ -50,19 +49,23 @@ export const CreditProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     try {
       // Load credits
-      const userCredits = await creditService.getUserCredits(user.id);
-      setCredits(userCredits);
+      const creditsResponse = await apiService.getCreditsBalance();
+      if (creditsResponse.success && creditsResponse.data) {
+        setCredits(creditsResponse.data.balance);
+      }
 
       // Load transactions
-      const userTransactions = await creditService.getUserTransactions(user.id);
-      const formattedTransactions: Transaction[] = userTransactions.map((t: DBTransaction) => ({
-        id: t.id,
-        type: t.type,
-        amount: t.amount,
-        description: t.description,
-        timestamp: new Date(t.created_at)
-      }));
-      setTransactions(formattedTransactions);
+      const transactionsResponse = await apiService.getTransactions();
+      if (transactionsResponse.success && transactionsResponse.data) {
+        const formattedTransactions: Transaction[] = transactionsResponse.data.transactions.map((t: any) => ({
+          id: t.id,
+          type: t.type,
+          amount: t.amount,
+          description: t.description,
+          timestamp: new Date(t.created_at)
+        }));
+        setTransactions(formattedTransactions);
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -77,15 +80,15 @@ export const CreditProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const success = await creditService.rechargeCredits(user.id, amount, paymentMethod);
+      const response = await apiService.rechargeCredits(amount, paymentMethod);
       
-      if (success) {
+      if (response.success) {
         // Reload user data to get updated credits and transactions
         await loadUserData();
       }
       
       setIsProcessing(false);
-      return success;
+      return response.success;
     } catch (error) {
       console.error('Recharge error:', error);
       setIsProcessing(false);
@@ -101,9 +104,9 @@ export const CreditProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setCredits(prev => prev - amount);
       
       // Update database in background
-      creditService.consumeCredits(user.id, amount, description)
-        .then(success => {
-          if (success) {
+      apiService.consumeCredits(amount, description)
+        .then(response => {
+          if (response.success) {
             // Add transaction to local state
             const transaction: Transaction = {
               id: Date.now().toString(),

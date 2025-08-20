@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import apiService from '../services/apiService';
 
 interface GeneratedImage {
   id: string;
@@ -54,38 +55,70 @@ export const ImageProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const generateImages = async (prompt: string, style: string, transparent: boolean): Promise<GeneratedImage[]> => {
     setIsGenerating(true);
     
-    // Simulate AI image generation delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Generate 4 mock images
-    const images: GeneratedImage[] = [];
-    for (let i = 0; i < 4; i++) {
-      const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
-      images.push({
-        id: `${Date.now()}-${i}`,
-        url: `${randomImage}?auto=compress&cs=tinysrgb&w=512&h=512&dpr=1`,
+    try {
+      const response = await apiService.generateImages(prompt, style, transparent, 4);
+      
+      if (response.success && response.data) {
+        const images: GeneratedImage[] = response.data.images.map((img: any) => ({
+          id: img.id,
+          url: img.url,
+          prompt: img.prompt,
+          style: img.style,
+          transparent: img.transparent,
+          timestamp: new Date(img.created_at)
+        }));
+        
+        // Add to history
+        const historyEntry: GenerationHistory = {
+          id: Date.now().toString(),
+          prompt,
+          style,
+          transparent,
+          images,
+          timestamp: new Date(),
+          creditsUsed: response.data.credits_consumed
+        };
+        
+        setHistory(prev => [historyEntry, ...prev]);
+        setIsGenerating(false);
+        
+        return images;
+      } else {
+        throw new Error(response.message || 'Failed to generate images');
+      }
+    } catch (error) {
+      console.error('Image generation error:', error);
+      setIsGenerating(false);
+      
+      // Fallback to mock images for demo
+      const images: GeneratedImage[] = [];
+      for (let i = 0; i < 4; i++) {
+        const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
+        images.push({
+          id: `${Date.now()}-${i}`,
+          url: `${randomImage}?auto=compress&cs=tinysrgb&w=512&h=512&dpr=1`,
+          prompt,
+          style,
+          transparent,
+          timestamp: new Date()
+        });
+      }
+      
+      const historyEntry: GenerationHistory = {
+        id: Date.now().toString(),
         prompt,
         style,
         transparent,
-        timestamp: new Date()
-      });
+        images,
+        timestamp: new Date(),
+        creditsUsed: 10
+      };
+      
+      setHistory(prev => [historyEntry, ...prev]);
+      setIsGenerating(false);
+      
+      return images;
     }
-    
-    // Add to history
-    const historyEntry: GenerationHistory = {
-      id: Date.now().toString(),
-      prompt,
-      style,
-      transparent,
-      images,
-      timestamp: new Date(),
-      creditsUsed: 10
-    };
-    
-    setHistory(prev => [historyEntry, ...prev]);
-    setIsGenerating(false);
-    
-    return images;
   };
 
   return (

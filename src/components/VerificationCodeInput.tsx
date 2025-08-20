@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { sendVerificationEmail } from '../services/emailService';
-import { storeVerificationCode } from '../services/verificationService';
+import apiService from '../services/apiService';
 
 interface VerificationCodeInputProps {
   onComplete: (code: string) => void;
@@ -74,14 +73,13 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
         await onResend();
       } else {
         // Default resend logic for verification emails
-        const emailResult = await sendVerificationEmail(email, name);
+        const response = await apiService.sendVerificationEmail(email, 'verification', name);
         
-        if (emailResult.success && emailResult.code) {
-          await storeVerificationCode(email, emailResult.code, 'verification');
+        if (response.success) {
           console.log('Verification email resent successfully');
         } else {
-          console.error('Failed to resend verification email:', emailResult.error);
-          alert('重发邮件失败，请稍后重试');
+          console.error('Failed to resend verification email:', response.error);
+          alert(response.message || '重发邮件失败，请稍后重试');
         }
       }
     } catch (error) {

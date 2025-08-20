@@ -1,11 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { buildGoogleAuthUrl, storeState } from '../config/google';
-import { exchangeCodeForTokens, getUserInfo, verifyIdToken } from '../services/googleAuth';
-import { userService } from '../services/userService';
-import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService';
-import { storeVerificationCode, verifyCode } from '../services/verificationService';
-import { supabase } from '../lib/supabase';
-import type { User as DBUser } from '../lib/supabase';
+import apiService from '../services/apiService';
 
 interface User {
   id: string;
@@ -54,28 +49,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Attempting login for:', email);
       
-      // Get user from database
-      const dbUser = await userService.getUserByEmail(email);
-      console.log('User found:', !!dbUser);
+      const response = await apiService.login(email, password);
       
-      if (dbUser && dbUser.email_verified) {
-        console.log('User verified, setting user state');
+      if (response.success && response.data?.user) {
         setUser({
-          id: dbUser.id,
-          email: dbUser.email,
-          name: dbUser.name,
-          avatar: dbUser.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
         });
         setIsLoading(false);
         return true;
-      } else if (dbUser && !dbUser.email_verified) {
-        console.log('User found but not verified');
-        // 返回特殊状态，让前端处理未验证的情况
+      } else if (response.error === 'EMAIL_NOT_VERIFIED') {
+        console.log('User email not verified');
         setIsLoading(false);
-        return 'unverified' as any; // 返回特殊状态
+        return 'unverified' as any;
       } else {
-        console.log('User not found or invalid credentials');
-        alert('邮箱或密码错误');
+        console.log('Login failed:', response.error);
+        alert(response.message || '邮箱或密码错误');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -92,43 +83,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Attempting registration for:', email);
       
-      // Check if user already exists
-      const existingUser = await userService.getUserByEmail(email);
-      if (existingUser) {
-        console.error('User already exists');
-        alert('该邮箱已被注册');
+      const response = await apiService.register(email, password, name);
+      
+      if (response.success) {
+        console.log('User registered successfully');
         setIsLoading(false);
-        return false;
-      }
-
-      console.log('Creating new user...');
-      // Create new user
-      const newUser = await userService.createUser({
-        email,
-        name,
-        password_hash: password, // In production, hash this password
-        email_verified: false
-      });
-
-      if (newUser) {
-        console.log('User created successfully:', newUser.id);
-        setIsLoading(false);
-        // Send verification email
-        const emailResult = await sendVerificationEmail(email, name);
-        
-        if (emailResult.success && emailResult.code) {
-          // Store verification code in database
-          await storeVerificationCode(email, emailResult.code, 'verification');
-          console.log('Verification email sent successfully');
-        } else {
-          console.error('Failed to send verification email:', emailResult.error);
-          alert('注册成功，但发送验证邮件失败。请稍后重试。');
-        }
-        
         return true;
       } else {
-        console.error('Failed to create user');
-        alert('注册失败，请稍后重试');
+        console.error('Registration failed:', response.error);
+        alert(response.message || '注册失败，请稍后重试');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -145,36 +108,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Verifying email for:', email, 'with code:', code);
       
-      // Verify code against database
-      const isValidCode = await verifyCode(email, code, 'verification');
+      const response = await apiService.verifyEmail(email, code, 'verification');
       
-      if (isValidCode) {
-        const dbUser = await userService.getUserByEmail(email);
-        if (dbUser) {
-          console.log('Verifying user email in database...');
-          // Verify email in database
-          const success = await userService.verifyEmail(dbUser.id);
-          
-          if (!success) {
-            console.error('Failed to verify email in database');
-            alert('验证失败，请稍后重试');
-            setIsLoading(false);
-            return false;
-          }
-          
-          console.log('Email verified, logging in user');
-          setUser({
-            id: dbUser.id,
-            email: dbUser.email,
-            name: dbUser.name,
-            avatar: dbUser.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
-          });
-          setIsLoading(false);
-          return true;
-        }
+      if (response.success && response.data?.user) {
+        console.log('Email verified, logging in user');
+        setUser({
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
+        });
+        setIsLoading(false);
+        return true;
       } else {
-        console.log('Invalid verification code');
-        alert('验证码错误或已过期，请重新获取');
+        console.log('Email verification failed:', response.error);
+        alert(response.message || '验证码错误或已过期，请重新获取');
       }
     } catch (error) {
       console.error('Email verification error:', error);
@@ -190,33 +138,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     try {
       console.log('Resending verification email to:', email);
-      // Check if user exists
-      const user = await userService.getUserByEmail(email);
-      if (!user) {
-        alert('该邮箱未注册');
-        setIsLoading(false);
-        return false;
-      }
-
-      if (user.email_verified) {
-        alert('该邮箱已经验证过了，可以直接登录');
-        setIsLoading(false);
-        return false;
-      }
-
-      // Send verification email
-      const emailResult = await sendVerificationEmail(email, user.name);
       
-      if (emailResult.success && emailResult.code) {
-        console.log('Email sent, storing verification code...');
-        // Store verification code in database
-        await storeVerificationCode(email, emailResult.code, 'verification');
+      const response = await apiService.sendVerificationEmail(email, 'verification');
+      
+      if (response.success) {
         console.log('Verification email resent successfully');
         setIsLoading(false);
         return true;
       } else {
-        console.error('Failed to resend verification email:', emailResult.error);
-        alert(`重发验证邮件失败: ${emailResult.error || '未知错误'}`);
+        console.error('Failed to resend verification email:', response.error);
+        alert(response.message || '重发验证邮件失败');
       }
     } catch (error) {
       console.error('Resend verification email error:', error);
@@ -272,51 +203,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('handleGoogleCallback called with code:', code.substring(0, 20) + '...');
       
-      // 交换授权码获取令牌
-      console.log('Exchanging code for tokens...');
-      const tokens = await exchangeCodeForTokens(code);
-      console.log('Tokens received:', !!tokens.access_token);
+      const response = await apiService.googleLogin(code, 'state');
       
-      // 验证ID Token
-      console.log('Verifying ID token...');
-      const idTokenPayload = verifyIdToken(tokens.id_token);
-      console.log('ID token verified:', !!idTokenPayload);
-      
-      // 获取用户信息
-      console.log('Getting user info...');
-      const userInfo = await getUserInfo(tokens.access_token);
-      console.log('User info received:', userInfo.email);
-      
-      // Check if user exists in database
-      let dbUser = await userService.getUserByGoogleId(userInfo.id);
-      
-      if (!dbUser) {
-        // Create new user from Google info
-        dbUser = await userService.createUser({
-          email: userInfo.email,
-          name: userInfo.name,
-          google_id: userInfo.id,
-          avatar: userInfo.picture,
-          email_verified: true
-        });
-      }
-      
-      if (dbUser) {
-        // 设置用户信息
+      if (response.success && response.data?.user) {
         setUser({
-          id: dbUser.id,
-          email: dbUser.email,
-          name: dbUser.name,
-          avatar: dbUser.avatar || userInfo.picture
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar
         });
       }
-      
-      // 存储令牌（可选）
-      localStorage.setItem('google_access_token', tokens.access_token);
-      if (tokens.refresh_token) {
-        localStorage.setItem('google_refresh_token', tokens.refresh_token);
-      }
-      
+
       console.log('Google login successful!');
       setIsLoading(false);
       return true;
@@ -332,26 +229,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      // Check if user exists
-      const user = await userService.getUserByEmail(email);
-      if (!user) {
-        alert('该邮箱未注册');
-        setIsLoading(false);
-        return false;
-      }
-
-      // Send password reset email
-      const emailResult = await sendPasswordResetEmail(email);
+      const response = await apiService.sendVerificationEmail(email, 'password_reset');
       
-      if (emailResult.success && emailResult.code) {
-        // Store verification code in database
-        await storeVerificationCode(email, emailResult.code, 'password_reset');
+      if (response.success) {
         console.log('Password reset email sent successfully');
         setIsLoading(false);
         return true;
       } else {
-        console.error('Failed to send password reset email:', emailResult.error);
-        alert('发送重置邮件失败，请稍后重试');
+        console.error('Failed to send password reset email:', response.error);
+        alert(response.message || '发送重置邮件失败，请稍后重试');
       }
     } catch (error) {
       console.error('Send reset code error:', error);
@@ -366,10 +252,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      // Verify code against database
-      const isValidCode = await verifyCode(email, code, 'password_reset');
+      const response = await apiService.verifyEmail(email, code, 'password_reset');
       setIsLoading(false);
-      return isValidCode;
+      return response.success;
     } catch (error) {
       console.error('Verify reset code error:', error);
       setIsLoading(false);
@@ -381,25 +266,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      // Get user by email
-      const user = await userService.getUserByEmail(email);
-      if (!user) {
-        alert('用户不存在');
-        setIsLoading(false);
-        return false;
-      }
-
-      // Update password (in production, hash the password)
-      const success = await userService.updateUser(user.id, {
-        password_hash: newPassword
-      });
-
-      if (success) {
+      const response = await apiService.resetPassword(email, '', newPassword);
+      
+      if (response.success) {
         console.log('Password reset successfully');
         setIsLoading(false);
         return true;
       } else {
-        alert('密码重置失败，请稍后重试');
+        alert(response.message || '密码重置失败，请稍后重试');
       }
     } catch (error) {
       console.error('Reset password error:', error);
@@ -412,6 +286,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
+    apiService.logout();
   };
 
   return (
