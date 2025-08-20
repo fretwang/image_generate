@@ -1,7 +1,8 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCredit } from '../contexts/CreditContext';
-import { Sparkles, Home, ImageIcon, GalleryVertical as Gallery, User as UserIcon, LogOut, Coins } from 'lucide-react';
+import { Sparkles, Home, ImageIcon, GalleryVertical as Gallery, User as UserIcon, LogOut, Coins, Bug } from 'lucide-react';
+import DebugLogs from './DebugLogs';
 
 interface HeaderProps {
   currentPage: string;
@@ -11,6 +12,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const { user, logout } = useAuth();
   const { credits } = useCredit();
+  const [showDebugLogs, setShowDebugLogs] = React.useState(false);
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Home' },
@@ -54,6 +56,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
             </div>
 
             <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowDebugLogs(true)}
+                className="text-gray-500 hover:text-blue-600 transition-colors"
+                title="查看系统日志"
+              >
+                <Bug className="w-5 h-5" />
+              </button>
               <img
                 src={user?.avatar}
                 alt={user?.name}
@@ -93,6 +102,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
           </nav>
         </div>
       </div>
+
+      {/* Debug Logs Modal */}
+      {showDebugLogs && (
+        <DebugLogs onClose={() => setShowDebugLogs(false)} />
+      )}
     </header>
   );
 };

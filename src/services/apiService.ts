@@ -1,4 +1,6 @@
 // API服务配置和通用请求方法
+import { logger } from '../utils/logger';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 interface ApiResponse<T = any> {
@@ -38,6 +40,8 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
+    logger.logApiCall(options.method || 'GET', endpoint, options.body ? JSON.parse(options.body as string) : undefined);
+    
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -56,12 +60,14 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
+        logger.logApiError(options.method || 'GET', endpoint, { status: response.status, data });
         throw new Error(data.message || `HTTP ${response.status}`);
       }
 
+      logger.debug(`API请求成功: ${options.method || 'GET'} ${endpoint}`, { status: response.status });
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      logger.logApiError(options.method || 'GET', endpoint, error);
       throw error;
     }
   }

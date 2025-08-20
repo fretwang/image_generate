@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { buildGoogleAuthUrl, storeState } from '../config/google';
 import apiService from '../services/apiService';
+import { logger } from '../utils/logger';
 
 interface User {
   id: string;
@@ -47,11 +48,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      console.log('Attempting login for:', email);
+      logger.info('用户尝试登录', { email });
       
       const response = await apiService.login(email, password);
       
       if (response.success && response.data?.user) {
+        logger.info('用户登录成功', { userId: response.data.user.id, email: response.data.user.email });
         setUser({
           id: response.data.user.id,
           email: response.data.user.email,
@@ -61,15 +63,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
         return true;
       } else if (response.error === 'EMAIL_NOT_VERIFIED') {
-        console.log('User email not verified');
+        logger.warn('用户邮箱未验证', { email });
         setIsLoading(false);
         return 'unverified' as any;
       } else {
-        console.log('Login failed:', response.error);
+        logger.error('用户登录失败', { email, error: response.error, message: response.message });
         alert(response.message || '邮箱或密码错误');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('登录过程中发生错误', { email, error });
       alert('登录失败，请稍后重试');
     }
     
@@ -81,20 +83,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      console.log('Attempting registration for:', email);
+      logger.info('用户尝试注册', { email, name });
       
       const response = await apiService.register(email, password, name);
       
       if (response.success) {
-        console.log('User registered successfully');
+        logger.info('用户注册成功', { email, name });
         setIsLoading(false);
         return true;
       } else {
-        console.error('Registration failed:', response.error);
+        logger.error('用户注册失败', { email, error: response.error, message: response.message });
         alert(response.message || '注册失败，请稍后重试');
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('注册过程中发生错误', { email, error });
       alert('注册失败，请稍后重试');
     }
     
@@ -106,12 +108,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      console.log('Verifying email for:', email, 'with code:', code);
+      logger.info('用户尝试验证邮箱', { email, code });
       
       const response = await apiService.verifyEmail(email, code, 'verification');
       
       if (response.success && response.data?.user) {
-        console.log('Email verified, logging in user');
+        logger.info('邮箱验证成功，用户自动登录', { userId: response.data.user.id, email: response.data.user.email });
         setUser({
           id: response.data.user.id,
           email: response.data.user.email,
@@ -121,11 +123,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
         return true;
       } else {
-        console.log('Email verification failed:', response.error);
+        logger.error('邮箱验证失败', { email, code, error: response.error, message: response.message });
         alert(response.message || '验证码错误或已过期，请重新获取');
       }
     } catch (error) {
-      console.error('Email verification error:', error);
+      logger.error('邮箱验证过程中发生错误', { email, code, error });
       alert('验证失败，请稍后重试');
     }
     
@@ -137,20 +139,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      console.log('Resending verification email to:', email);
+      logger.info('重新发送验证邮件', { email });
       
       const response = await apiService.sendVerificationEmail(email, 'verification');
       
       if (response.success) {
-        console.log('Verification email resent successfully');
+        logger.info('验证邮件重发成功', { email });
         setIsLoading(false);
         return true;
       } else {
-        console.error('Failed to resend verification email:', response.error);
+        logger.error('验证邮件重发失败', { email, error: response.error, message: response.message });
         alert(response.message || '重发验证邮件失败');
       }
     } catch (error) {
-      console.error('Resend verification email error:', error);
+      logger.error('重发验证邮件过程中发生错误', { email, error });
       alert(`重发验证邮件失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
     
@@ -162,9 +164,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      logger.logGoogleAuth('开始Google登录流程');
+      
       // 检查Google配置
       if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
-        console.warn('Google Client ID not configured, using mock login');
+        logger.warn('Google Client ID未配置，使用模拟登录');
         // 模拟Google登录作为后备
         await new Promise(resolve => setTimeout(resolve, 2000));
         setUser({
@@ -177,6 +181,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       }
 
+      logger.logGoogleAuth('构建Google OAuth URL');
       // 构建Google OAuth URL
       const authUrl = buildGoogleAuthUrl();
       const urlParams = new URLSearchParams(new URL(authUrl).search);
@@ -184,14 +189,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (state) {
         storeState(state);
+        logger.logGoogleAuth('存储OAuth状态码', { state: state.substring(0, 10) + '...' });
       }
       
+      logger.logGoogleAuth('重定向到Google OAuth', { url: authUrl.substring(0, 50) + '...' });
       // 重定向到Google OAuth
       window.location.href = authUrl;
       return true;
       
     } catch (error) {
-      console.error('Google login error:', error);
+      logger.logGoogleError('Google登录过程中发生错误', error);
       setIsLoading(false);
       return false;
     }
@@ -201,11 +208,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      console.log('handleGoogleCallback called with code:', code.substring(0, 20) + '...');
+      logger.logGoogleAuth('处理Google OAuth回调', { code: code.substring(0, 20) + '...' });
       
       const response = await apiService.googleLogin(code, 'state');
       
       if (response.success && response.data?.user) {
+        logger.logGoogleAuth('Google登录成功', { userId: response.data.user.id, email: response.data.user.email });
         setUser({
           id: response.data.user.id,
           email: response.data.user.email,
@@ -214,12 +222,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       }
 
-      console.log('Google login successful!');
       setIsLoading(false);
       return true;
       
     } catch (error) {
-      console.error('Google callback error:', error);
+      logger.logGoogleError('Google OAuth回调处理失败', error);
       setIsLoading(false);
       return false;
     }
@@ -229,18 +236,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      logger.info('发送密码重置邮件', { email });
       const response = await apiService.sendVerificationEmail(email, 'password_reset');
       
       if (response.success) {
-        console.log('Password reset email sent successfully');
+        logger.info('密码重置邮件发送成功', { email });
         setIsLoading(false);
         return true;
       } else {
-        console.error('Failed to send password reset email:', response.error);
+        logger.error('密码重置邮件发送失败', { email, error: response.error, message: response.message });
         alert(response.message || '发送重置邮件失败，请稍后重试');
       }
     } catch (error) {
-      console.error('Send reset code error:', error);
+      logger.error('发送密码重置邮件过程中发生错误', { email, error });
       alert('发送重置邮件失败，请稍后重试');
     }
     
@@ -252,11 +260,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      logger.info('验证密码重置验证码', { email, code });
       const response = await apiService.verifyEmail(email, code, 'password_reset');
+      
+      if (response.success) {
+        logger.info('密码重置验证码验证成功', { email });
+      } else {
+        logger.error('密码重置验证码验证失败', { email, code, error: response.error });
+      }
+      
       setIsLoading(false);
       return response.success;
     } catch (error) {
-      console.error('Verify reset code error:', error);
+      logger.error('验证密码重置验证码过程中发生错误', { email, code, error });
       setIsLoading(false);
       return false;
     }
@@ -266,17 +282,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      logger.info('重置用户密码', { email });
       const response = await apiService.resetPassword(email, '', newPassword);
       
       if (response.success) {
-        console.log('Password reset successfully');
+        logger.info('密码重置成功', { email });
         setIsLoading(false);
         return true;
       } else {
+        logger.error('密码重置失败', { email, error: response.error, message: response.message });
         alert(response.message || '密码重置失败，请稍后重试');
       }
     } catch (error) {
-      console.error('Reset password error:', error);
+      logger.error('密码重置过程中发生错误', { email, error });
       alert('密码重置失败，请稍后重试');
     }
     
@@ -285,6 +303,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    logger.info('用户退出登录', { userId: user?.id, email: user?.email });
     setUser(null);
     apiService.logout();
   };

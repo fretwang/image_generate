@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { validateState } from '../config/google';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const GoogleAuthCallback: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -11,35 +12,38 @@ const GoogleAuthCallback: React.FC = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log('GoogleAuthCallback: Processing callback...');
-        console.log('GoogleAuthCallback: Current URL:', window.location.href);
-        console.log('GoogleAuthCallback: Pathname:', window.location.pathname);
-        console.log('GoogleAuthCallback: Search:', window.location.search);
+        logger.logGoogleAuth('开始处理OAuth回调', {
+          url: window.location.href,
+          pathname: window.location.pathname,
+          search: window.location.search
+        });
         
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         const state = urlParams.get('state');
         const error = urlParams.get('error');
 
-        console.log('GoogleAuthCallback: OAuth params:', { 
+        logger.logGoogleAuth('解析OAuth参数', { 
           code: code ? code.substring(0, 20) + '...' : null, 
           state: state ? state.substring(0, 10) + '...' : null, 
           error 
         });
         
         if (error) {
+          logger.logGoogleError('Google OAuth返回错误', error);
           throw new Error(`Google OAuth error: ${error}`);
         }
 
         if (!code) {
+          logger.logGoogleError('未收到授权码', 'No authorization code received');
           throw new Error('No authorization code received');
         }
 
-        console.log('GoogleAuthCallback: Calling handleGoogleCallback...');
+        logger.logGoogleAuth('调用handleGoogleCallback处理授权码');
         await handleGoogleCallback(code);
         setStatus('success');
         
-        console.log('GoogleAuthCallback: Success! Redirecting to home...');
+        logger.logGoogleAuth('OAuth回调处理成功，准备重定向到首页');
         setTimeout(() => {
           // 清理URL参数并重新加载
           window.history.replaceState({}, document.title, window.location.pathname);
@@ -47,7 +51,7 @@ const GoogleAuthCallback: React.FC = () => {
         }, 1000);
         
       } catch (err) {
-        console.error('GoogleAuthCallback: Error:', err);
+        logger.logGoogleError('OAuth回调处理失败', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         setStatus('error');
       }
