@@ -1,7 +1,7 @@
 // Google OAuth 配置
 export const GOOGLE_CONFIG = {
   clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-  redirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || window.location.origin,
+  redirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.protocol}//${window.location.host}`,
   scope: 'openid email profile',
   responseType: 'code',
   accessType: 'offline',

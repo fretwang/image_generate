@@ -60,7 +60,7 @@
 ```bash
 VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
 VITE_GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-VITE_GOOGLE_REDIRECT_URI=https://tupian.life/auth/callback
+VITE_GOOGLE_REDIRECT_URI=https://tupian.life/
 ```
 
 ### 3. 获取Google OAuth凭据
