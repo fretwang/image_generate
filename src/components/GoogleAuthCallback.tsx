@@ -40,18 +40,23 @@ const GoogleAuthCallback: React.FC = () => {
         }
 
         logger.logGoogleAuth('调用handleGoogleCallback处理授权码');
-        await handleGoogleCallback(code);
-        setStatus('success');
+        const success = await handleGoogleCallback(code);
         
-        logger.logGoogleAuth('OAuth回调处理成功，准备重定向到首页');
-        setTimeout(() => {
-          // 清理URL参数并重新加载
-          window.history.replaceState({}, document.title, window.location.pathname);
-          window.location.href = '/';
-        }, 1000);
+        if (success) {
+          setStatus('success');
+          logger.logGoogleAuth('OAuth回调处理成功，准备重定向到首页');
+          setTimeout(() => {
+            // 清理URL参数并重新加载
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.href = '/';
+          }, 1000);
+        } else {
+          throw new Error('Google登录处理失败');
+        }
         
       } catch (err) {
         logger.logGoogleError('OAuth回调处理失败', err);
+
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         setStatus('error');
       }

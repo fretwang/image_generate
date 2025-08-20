@@ -210,7 +210,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       logger.logGoogleAuth('处理Google OAuth回调', { code: code.substring(0, 20) + '...' });
       
-      const response = await apiService.googleLogin(code, 'state');
+      // 调用外部API处理Google OAuth
+      const response = await apiService.googleLogin(code, '');
       
       if (response.success && response.data?.user) {
         logger.logGoogleAuth('Google登录成功', { userId: response.data.user.id, email: response.data.user.email });
@@ -218,15 +219,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           id: response.data.user.id,
           email: response.data.user.email,
           name: response.data.user.name,
-          avatar: response.data.user.avatar
+          avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
         });
+        setIsLoading(false);
+        return true;
+      } else {
+        logger.logGoogleError('Google登录失败', { error: response.error, message: response.message });
+        alert(response.message || 'Google登录失败，请稍后重试');
+        setIsLoading(false);
+        return false;
       }
-
-      setIsLoading(false);
-      return true;
       
     } catch (error) {
       logger.logGoogleError('Google OAuth回调处理失败', error);
+      alert('Google登录失败，请稍后重试');
       setIsLoading(false);
       return false;
     }
