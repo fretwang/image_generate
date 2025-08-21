@@ -61,6 +61,16 @@ class ApiService {
 
       if (!response.ok) {
         logger.logApiError(options.method || 'GET', endpoint, { status: response.status, data });
+        
+        // 如果是401未授权错误，不要抛出异常，而是返回错误响应
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'UNAUTHORIZED',
+            message: data.message || 'Unauthorized'
+          };
+        }
+        
         throw new Error(data.message || `HTTP ${response.status}`);
       }
 
@@ -68,7 +78,13 @@ class ApiService {
       return data;
     } catch (error) {
       logger.logApiError(options.method || 'GET', endpoint, error);
-      throw error;
+      
+      // 网络错误或其他错误，返回失败响应而不是抛出异常
+      return {
+        success: false,
+        error: 'NETWORK_ERROR',
+        message: error instanceof Error ? error.message : 'Network error occurred'
+      };
     }
   }
 

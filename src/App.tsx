@@ -31,7 +31,11 @@ function AppContent() {
       searchParams: window.location.search,
       hasUser: !!user,
       isInitialized,
-      userInfo: user ? { id: user.id, email: user.email } : null
+      userInfo: user ? { id: user.id, email: user.email } : null,
+      localStorage: {
+        hasToken: !!localStorage.getItem('auth_token'),
+        hasUserData: !!localStorage.getItem('user_data')
+      }
     });
   }, [hasAuthCode, isGoogleCallback, user, isInitialized]);
 

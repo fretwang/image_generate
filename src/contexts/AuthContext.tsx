@@ -83,12 +83,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               localStorage.setItem('user_data', JSON.stringify(userData));
               logger.info('成功获取用户信息', { userId: userData.id });
             } else {
-              logger.warn('获取用户信息失败，清理token');
-              localStorage.removeItem('auth_token');
+              logger.warn('获取用户信息失败，但保留token', { error: response.error });
+              // 不要立即清理token，可能是临时的网络问题
+              // localStorage.removeItem('auth_token');
             }
           } catch (error) {
-            logger.error('获取用户信息出错，清理token', error);
-            localStorage.removeItem('auth_token');
+            logger.error('获取用户信息出错，但保留token', error);
+            // 不要立即清理token，可能是临时的网络问题
+            // localStorage.removeItem('auth_token');
           }
         }
       } catch (error) {

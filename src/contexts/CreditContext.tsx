@@ -48,15 +48,23 @@ export const CreditProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!user) return;
 
     try {
+      logger.info('开始加载用户积分和交易数据', { userId: user.id });
+      
       // Load credits
       const creditsResponse = await apiService.getCreditsBalance();
       if (creditsResponse.success && creditsResponse.data) {
+        logger.info('积分加载成功', { balance: creditsResponse.data.balance });
         setCredits(creditsResponse.data.balance);
+      } else {
+        logger.warn('积分加载失败', { error: creditsResponse.error, message: creditsResponse.message });
+        // 不要因为积分加载失败就清除用户状态
+        setCredits(0);
       }
 
       // Load transactions
       const transactionsResponse = await apiService.getTransactions();
       if (transactionsResponse.success && transactionsResponse.data) {
+        logger.info('交易记录加载成功', { count: transactionsResponse.data.transactions.length });
         const formattedTransactions: Transaction[] = transactionsResponse.data.transactions.map((t: any) => ({
           id: t.id,
           type: t.type,
@@ -65,9 +73,15 @@ export const CreditProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           timestamp: new Date(t.created_at)
         }));
         setTransactions(formattedTransactions);
+      } else {
+        logger.warn('交易记录加载失败', { error: transactionsResponse.error, message: transactionsResponse.message });
+        setTransactions([]);
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      logger.error('加载用户数据时发生错误', error);
+      // 不要因为数据加载失败就影响用户登录状态
+      setCredits(0);
+      setTransactions([]);
     }
   };
 
