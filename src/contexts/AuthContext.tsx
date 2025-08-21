@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { buildGoogleAuthUrl, storeState } from '../config/google';
 import apiService from '../services/apiService';
 import { logger } from '../utils/logger';
@@ -53,9 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const token = localStorage.getItem('auth_token');
         const savedUser = localStorage.getItem('user_data');
         
-        logger.info('初始化认证状态', { hasToken: !!token, hasSavedUser: !!savedUser });
-        
-        if (token && savedUser) {
+        if (savedUser) {
           try {
             const userData = JSON.parse(savedUser);
             logger.info('恢复用户状态', { userId: userData.id, email: userData.email });
@@ -100,6 +98,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
   }, []);
 
+  // 旧的初始化逻辑 - 移除
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token && !user) {
+      // 如果有token但没有用户信息，尝试获取用户信息
+      logger.info('检测到保存的token，尝试获取用户信息');
+      // 这里可以调用API获取用户信息，或者从token中解析
+      // 暂时先不自动登录，等待用户手动操作
+    }
+  }, [user]);
+  
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
