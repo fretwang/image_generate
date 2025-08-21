@@ -1,5 +1,6 @@
-import { supabase } from '../lib/supabase';
+// 用户服务 - 现在使用外部API
 import type { User } from '../lib/supabase';
+import apiService from './apiService';
 
 export interface CreateUserData {
   email: string;
@@ -13,59 +14,16 @@ export interface CreateUserData {
 export const userService = {
   // Create new user
   async createUser(userData: CreateUserData): Promise<User | null> {
-    if (!supabase) {
-      console.error('Supabase not initialized');
-      return null;
-    }
-
     try {
-      console.log('Creating user with data:', { ...userData, password_hash: '[HIDDEN]' });
+      console.log('Creating user with external API:', { ...userData, password_hash: '[HIDDEN]' });
       
-      // Generate a UUID for the new user
-      const userId = crypto.randomUUID();
-      const userDataWithId = { ...userData, id: userId };
+      const response = await apiService.register(userData.email, userData.password_hash || '', userData.name);
       
-      const { data, error } = await supabase
-        .from('users')
-        .insert([userDataWithId])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating user:', error);
-        console.error('Error details:', error.message, error.details, error.hint);
-        return null;
+      if (response.success && response.data?.user) {
+        return response.data.user;
       }
-
-      console.log('User created, creating credits record...');
-      // Create initial credits record
-      const { error: creditsError } = await supabase
-        .from('credits')
-        .insert([{
-          user_id: userId,
-          balance: 100 // Initial bonus credits
-        }]);
-
-      if (creditsError) {
-        console.error('Error creating credits:', creditsError);
-      }
-
-      console.log('Creating initial transaction...');
-      // Create initial transaction record
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert([{
-          user_id: userId,
-          type: 'recharge',
-          amount: 100,
-          description: 'Initial bonus credits'
-        }]);
-
-      if (transactionError) {
-        console.error('Error creating transaction:', transactionError);
-      }
-
-      return data;
+      
+      return null;
     } catch (error) {
       console.error('Error in createUser:', error);
       return null;
@@ -75,24 +33,10 @@ export const userService = {
   // Get user by email
   async getUserByEmail(email: string): Promise<User | null> {
     try {
-      console.log('Getting user by email:', email);
+      console.log('Getting user by email via API:', email);
       
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      if (error) {
-        if (error.code !== 'PGRST116') { // PGRST116 is "not found" error
-          console.error('Error getting user by email:', error);
-        }
-        console.log('User not found with email:', email);
-        return null;
-      }
-
-      console.log('User found:', data.email, 'verified:', data.email_verified);
-      return data;
+      // 这个功能现在通过登录API实现
+      return null;
     } catch (error) {
       console.error('Error in getUserByEmail:', error);
       return null;
@@ -102,18 +46,8 @@ export const userService = {
   // Get user by Google ID
   async getUserByGoogleId(googleId: string): Promise<User | null> {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('google_id', googleId)
-        .single();
-
-      if (error) {
-        console.error('Error getting user by Google ID:', error);
-        return null;
-      }
-
-      return data;
+      // 这个功能现在通过Google登录API实现
+      return null;
     } catch (error) {
       console.error('Error in getUserByGoogleId:', error);
       return null;
@@ -123,19 +57,13 @@ export const userService = {
   // Update user
   async updateUser(userId: string, updates: Partial<User>): Promise<User | null> {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating user:', error);
-        return null;
+      const response = await apiService.updateUserProfile(updates);
+      
+      if (response.success && response.data?.user) {
+        return response.data.user;
       }
-
-      return data;
+      
+      return null;
     } catch (error) {
       console.error('Error in updateUser:', error);
       return null;
@@ -145,19 +73,7 @@ export const userService = {
   // Verify email
   async verifyEmail(userId: string): Promise<boolean> {
     try {
-      console.log('Verifying email for user:', userId);
-      
-      const { error } = await supabase
-        .from('users')
-        .update({ email_verified: true })
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Error verifying email:', error);
-        return false;
-      }
-
-      console.log('Email verified successfully');
+      console.log('Email verification now handled by external API');
       return true;
     } catch (error) {
       console.error('Error in verifyEmail:', error);

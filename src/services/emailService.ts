@@ -1,4 +1,5 @@
-import { supabase } from '../lib/supabase';
+// 邮件服务 - 现在使用外部API
+import apiService from './apiService';
 
 export interface SendEmailRequest {
   to: string;
@@ -19,31 +20,18 @@ export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// 发送邮件
+// 发送邮件 (现在通过外部API)
 export const sendEmail = async (request: SendEmailRequest): Promise<SendEmailResponse> => {
   try {
-    console.log('Sending email request:', { ...request, code: '[HIDDEN]' });
+    console.log('Sending email request via external API:', { ...request, code: '[HIDDEN]' });
 
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
+    const response = await apiService.sendVerificationEmail(request.to, request.type, request.name);
     
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error('Email API error:', result);
-      throw new Error(result.error || 'Failed to send email');
-    }
-
-    console.log('Email sent successfully:', result);
-    return result;
+    return {
+      success: response.success,
+      message: response.message || 'Email sent successfully',
+      error: response.error
+    };
   } catch (error) {
     console.error('Email service error:', error);
     return {
@@ -57,22 +45,16 @@ export const sendEmail = async (request: SendEmailRequest): Promise<SendEmailRes
 // 发送验证码邮件
 export const sendVerificationEmail = async (email: string, name?: string): Promise<{ success: boolean; code?: string; error?: string }> => {
   try {
-    console.log('Generating verification code for:', email);
-    const code = generateVerificationCode();
+    console.log('Sending verification email via external API:', email);
     
-    const result = await sendEmail({
-      to: email,
-      type: 'verification',
-      code,
-      name
-    });
-
-    if (result.success) {
+    const response = await apiService.sendVerificationEmail(email, 'verification', name);
+    
+    if (response.success) {
       console.log('Verification email sent successfully');
-      return { success: true, code };
+      return { success: true };
     } else {
-      console.error('Failed to send verification email:', result);
-      return { success: false, error: result.error || result.message };
+      console.error('Failed to send verification email:', response);
+      return { success: false, error: response.error || response.message };
     }
   } catch (error) {
     console.error('Send verification email error:', error);
@@ -86,18 +68,12 @@ export const sendVerificationEmail = async (email: string, name?: string): Promi
 // 发送密码重置邮件
 export const sendPasswordResetEmail = async (email: string): Promise<{ success: boolean; code?: string; error?: string }> => {
   try {
-    const code = generateVerificationCode();
+    const response = await apiService.sendVerificationEmail(email, 'password_reset');
     
-    const result = await sendEmail({
-      to: email,
-      type: 'password_reset',
-      code
-    });
-
-    if (result.success) {
-      return { success: true, code };
+    if (response.success) {
+      return { success: true };
     } else {
-      return { success: false, error: result.error || result.message };
+      return { success: false, error: response.error || response.message };
     }
   } catch (error) {
     console.error('Send password reset email error:', error);
