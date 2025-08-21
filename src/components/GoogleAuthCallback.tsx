@@ -6,11 +6,19 @@ import { logger } from '../utils/logger';
 const GoogleAuthCallback: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [error, setError] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { handleGoogleCallback } = useAuth();
 
   useEffect(() => {
     const handleCallback = async () => {
+      // 防止重复处理
+      if (isProcessing) {
+        logger.logGoogleAuth('回调已在处理中，跳过重复执行');
+        return;
+      }
+
       try {
+        setIsProcessing(true);
         logger.logGoogleAuth('开始处理OAuth回调', {
           url: window.location.href,
           pathname: window.location.pathname,
@@ -57,15 +65,17 @@ const GoogleAuthCallback: React.FC = () => {
 
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         setStatus('error');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
-    // 只在有code参数时才处理回调，避免重复处理
+    // 只在有code参数且未在处理中时才处理回调
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('code') && status === 'loading') {
+    if (urlParams.has('code') && status === 'loading' && !isProcessing) {
       handleCallback();
     }
-  }, [handleGoogleCallback]);
+  }, [handleGoogleCallback, status, isProcessing]);
 
   if (status === 'loading') {
     return (

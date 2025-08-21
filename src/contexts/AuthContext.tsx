@@ -38,6 +38,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isHandlingCallback, setIsHandlingCallback] = useState(false);
   const [pendingVerificationData, setPendingVerificationData] = useState<{
     email: string;
     code: string;
@@ -205,7 +206,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const handleGoogleCallback = async (code: string): Promise<boolean> => {
+    // 防止重复调用
+    if (isHandlingCallback) {
+      logger.logGoogleAuth('Google回调已在处理中，跳过重复调用');
+      return false;
+    }
+
     setIsLoading(true);
+    setIsHandlingCallback(true);
     
     try {
       logger.logGoogleAuth('处理Google OAuth回调', { code: code.substring(0, 20) + '...' });
@@ -226,11 +234,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         window.history.replaceState({}, document.title, window.location.pathname);
         
         setIsLoading(false);
+        setIsHandlingCallback(false);
         return true;
       } else {
         logger.logGoogleError('Google登录失败', { error: response.error, message: response.message });
         alert(response.message || 'Google登录失败，请稍后重试');
         setIsLoading(false);
+        setIsHandlingCallback(false);
         return false;
       }
       
@@ -238,6 +248,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logger.logGoogleError('Google OAuth回调处理失败', error);
       alert('Google登录失败，请稍后重试');
       setIsLoading(false);
+      setIsHandlingCallback(false);
       return false;
     }
   };

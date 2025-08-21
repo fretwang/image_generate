@@ -94,6 +94,16 @@ class ApiService {
   }
 
   async googleLogin(code: string, state: string) {
+    // 防止重复调用的标记
+    const callKey = `google_login_${code.substring(0, 10)}`;
+    if (sessionStorage.getItem(callKey)) {
+      logger.logApiCall('GET', 'Google OAuth API (跳过重复调用)', { code: code.substring(0, 20) + '...' });
+      throw new Error('重复的Google登录请求');
+    }
+    
+    // 标记正在处理
+    sessionStorage.setItem(callKey, 'processing');
+    
     // 直接调用外部API而不是内部API
     const url = `https://fretwang.com/api/auth/google?code=${encodeURIComponent(code)}`;
     
@@ -111,6 +121,7 @@ class ApiService {
 
       if (!response.ok) {
         logger.logApiError('GET', url, { status: response.status, data });
+        sessionStorage.removeItem(callKey);
         throw new Error(data.message || `HTTP ${response.status}`);
       }
 
@@ -121,9 +132,12 @@ class ApiService {
         this.saveToken(data.data.token);
       }
       
+      // 清理标记
+      sessionStorage.removeItem(callKey);
       return data;
     } catch (error) {
       logger.logApiError('GET', url, error);
+      sessionStorage.removeItem(callKey);
       throw error;
     }
   }
