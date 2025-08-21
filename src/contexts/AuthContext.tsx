@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { buildGoogleAuthUrl, storeState } from '../config/google';
 import apiService from '../services/apiService';
 import { logger } from '../utils/logger';
@@ -23,7 +23,6 @@ interface AuthContextType {
   resetPassword: (email: string, newPassword: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
-  isInitialized: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,7 +39,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isHandlingCallback, setIsHandlingCallback] = useState(false);
   const [pendingVerificationData, setPendingVerificationData] = useState<{
     email: string;
@@ -49,51 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   } | null>(null);
 
   // 初始化时检查是否有保存的token和用户状态
-          try {
-            const userData = JSON.parse(savedUser);
-            logger.info('恢复用户状态', { userId: userData.id, email: userData.email });
-            setUser(userData);
-          } catch (error) {
-            logger.error('解析保存的用户数据失败', error);
-            // 清理无效数据
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user_data');
-          }
-        } else if (token) {
-          // 有token但没有用户数据，尝试获取用户信息
-          logger.info('有token但无用户数据，尝试获取用户信息');
-          try {
-            const response = await apiService.getUserProfile();
-            if (response.success && response.data?.user) {
-              const userData = {
-                id: response.data.user.id,
-                email: response.data.user.email,
-                name: response.data.user.name,
-                avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
-              };
-              setUser(userData);
-              localStorage.setItem('user_data', JSON.stringify(userData));
-              logger.info('成功获取用户信息', { userId: userData.id });
-            } else {
-              logger.warn('获取用户信息失败，清理token');
-              localStorage.removeItem('auth_token');
-            }
-          } catch (error) {
-            logger.error('获取用户信息出错，清理token', error);
-            localStorage.removeItem('auth_token');
-          }
-        }
-      } catch (error) {
-        logger.error('初始化认证状态失败', error);
-      } finally {
-        setIsInitialized(true);
-      }
-    };
-
-    initializeAuth();
-  }, []);
-
-  // 旧的初始化逻辑 - 移除
+  useEffect(() => {
     const initializeAuth = async () => {
       try {
         const token = localStorage.getItem('auth_token');
@@ -145,6 +99,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     initializeAuth();
   }, []);
+
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
