@@ -160,6 +160,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           name: response.data.user.name,
           avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
         });
+        
+        // 保存用户数据到localStorage
+        const userData = {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
+        };
+        localStorage.setItem('user_data', JSON.stringify(userData));
+        
         setIsLoading(false);
         return true;
       } else if (response.error === 'EMAIL_NOT_VERIFIED') {
@@ -220,6 +230,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           name: response.data.user.name,
           avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
         });
+        
+        // 保存用户数据到localStorage
+        const userData = {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
+        };
+        localStorage.setItem('user_data', JSON.stringify(userData));
+        
         setIsLoading(false);
         return true;
       } else {
