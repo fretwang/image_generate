@@ -45,6 +45,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     type: 'verification' | 'password_reset';
   } | null>(null);
 
+  // 初始化时检查是否有保存的用户状态
+  React.useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token && !user) {
+      // 如果有token但没有用户信息，尝试获取用户信息
+      logger.info('检测到保存的token，尝试获取用户信息');
+      // 这里可以调用API获取用户信息，或者从token中解析
+      // 暂时先不自动登录，等待用户手动操作
+    }
+  }, [user]);
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
@@ -223,6 +233,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (response.success && response.data?.user) {
         logger.logGoogleAuth('Google登录成功', { userId: response.data.user.id, email: response.data.user.email });
+        
+        // 确保用户状态正确设置
         setUser({
           id: response.data.user.id,
           email: response.data.user.email,
@@ -230,11 +242,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: response.data.user.avatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`
         });
         
+        // 保存token到localStorage
+        if (response.data.token) {
+          localStorage.setItem('auth_token', response.data.token);
+          logger.logGoogleAuth('保存认证token', { tokenLength: response.data.token.length });
+        }
+        
         // 清理URL参数
         window.history.replaceState({}, document.title, window.location.pathname);
         
         setIsLoading(false);
         setIsHandlingCallback(false);
+        
+        // 等待状态更新完成后再重新加载
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+        
         return true;
       } else {
         logger.logGoogleError('Google登录失败', { error: response.error, message: response.message });

@@ -127,10 +127,7 @@ class ApiService {
 
       logger.debug(`Google OAuth API请求成功`, { status: response.status });
       
-      // 如果返回了token，保存它
-      if (data.success && data.data?.token) {
-        this.saveToken(data.data.token);
-      }
+      // 不在这里保存token，让AuthContext处理
       
       // 清理标记
       sessionStorage.removeItem(callKey);

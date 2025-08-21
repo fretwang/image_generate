@@ -23,13 +23,24 @@ function AppContent() {
   // 只有在没有用户登录且有授权码时才显示回调组件
   const isGoogleCallback = hasAuthCode && !user;
 
-  console.log('App routing check:', {
-    currentPath: window.location.pathname,
-    hasAuthCode,
-    isGoogleCallback,
-    searchParams: window.location.search,
-    hasUser: !!user
-  });
+  React.useEffect(() => {
+    console.log('App routing check:', {
+      currentPath: window.location.pathname,
+      hasAuthCode,
+      isGoogleCallback,
+      searchParams: window.location.search,
+      hasUser: !!user,
+      userInfo: user ? { id: user.id, email: user.email } : null
+    });
+  }, [hasAuthCode, isGoogleCallback, user]);
+
+  // 如果用户已登录但URL还有OAuth参数，清理URL
+  React.useEffect(() => {
+    if (user && hasAuthCode) {
+      console.log('用户已登录，清理OAuth参数');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [user, hasAuthCode]);
 
   // 如果检测到Google OAuth参数，显示回调处理组件
   if (isGoogleCallback) {
