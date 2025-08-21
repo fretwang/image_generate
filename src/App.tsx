@@ -20,13 +20,15 @@ function AppContent() {
   // 检查是否是Google OAuth回调
   const urlParams = new URLSearchParams(window.location.search);
   const hasAuthCode = urlParams.has('code') && urlParams.has('state');
-  const isGoogleCallback = hasAuthCode;
+  // 只有在没有用户登录且有授权码时才显示回调组件
+  const isGoogleCallback = hasAuthCode && !user;
 
   console.log('App routing check:', {
     currentPath: window.location.pathname,
     hasAuthCode,
     isGoogleCallback,
-    searchParams: window.location.search
+    searchParams: window.location.search,
+    hasUser: !!user
   });
 
   // 如果检测到Google OAuth参数，显示回调处理组件

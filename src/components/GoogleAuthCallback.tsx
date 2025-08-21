@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { validateState } from '../config/google';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { logger } from '../utils/logger';
 
@@ -45,11 +44,10 @@ const GoogleAuthCallback: React.FC = () => {
         if (success) {
           setStatus('success');
           logger.logGoogleAuth('OAuth回调处理成功，准备重定向到首页');
-          setTimeout(() => {
-            // 清理URL参数并重新加载
-            window.history.replaceState({}, document.title, window.location.pathname);
-            window.location.href = '/';
-          }, 1000);
+          // 立即清理URL参数并重定向
+          window.history.replaceState({}, document.title, window.location.pathname);
+          // 不要重新加载页面，让React路由处理
+          window.location.reload();
         } else {
           throw new Error('Google登录处理失败');
         }
@@ -62,7 +60,11 @@ const GoogleAuthCallback: React.FC = () => {
       }
     };
 
-    handleCallback();
+    // 只在有code参数时才处理回调，避免重复处理
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('code') && status === 'loading') {
+      handleCallback();
+    }
   }, [handleGoogleCallback]);
 
   if (status === 'loading') {
