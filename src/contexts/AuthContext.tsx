@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { buildGoogleAuthUrl, storeState } from '../config/google';
 import apiService from '../services/apiService';
 import { logger } from '../utils/logger';
@@ -23,6 +23,7 @@ interface AuthContextType {
   resetPassword: (email: string, newPassword: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  isInitialized: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,7 +54,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const token = localStorage.getItem('auth_token');
         const savedUser = localStorage.getItem('user_data');
         
-        if (savedUser) {
+        logger.info('初始化认证状态', { hasToken: !!token, hasSavedUser: !!savedUser });
+        
+        if (token && savedUser) {
           try {
             const userData = JSON.parse(savedUser);
             logger.info('恢复用户状态', { userId: userData.id, email: userData.email });
@@ -98,17 +101,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
   }, []);
 
-  // 旧的初始化逻辑 - 移除
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token && !user) {
-      // 如果有token但没有用户信息，尝试获取用户信息
-      logger.info('检测到保存的token，尝试获取用户信息');
-      // 这里可以调用API获取用户信息，或者从token中解析
-      // 暂时先不自动登录，等待用户手动操作
-    }
-  }, [user]);
-  
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
@@ -404,6 +396,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     logger.info('用户退出登录', { userId: user?.id, email: user?.email });
     setUser(null);
+    localStorage.removeItem('user_data');
     apiService.logout();
   };
 
@@ -420,7 +413,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       verifyResetCode, 
       resetPassword, 
       logout, 
-      isLoading 
+      isLoading,
+      isInitialized
     }}>
       {children}
     </AuthContext.Provider>
