@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { STRIPE_CONFIG, type StripeProduct } from '../stripe-config';
-import { createClient } from '@supabase/supabase-js';
-import { Loader2, CreditCard, Check } from 'lucide-react';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-);
+import { Loader2, CreditCard, Check, X } from 'lucide-react';
 
 interface StripeCheckoutProps {
   onClose?: () => void;
@@ -25,23 +19,23 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({ onClose }) => {
     setSelectedProduct(product);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const token = localStorage.getItem('auth_token');
       
-      if (!session?.access_token) {
+      if (!token) {
         throw new Error('No authentication token available');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
+      const response = await fetch('https://www.fretwang.com/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           price_id: product.priceId,
           mode: product.mode,
-          success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/profile`,
+          success_url: 'https://www.fretwang.com/stripe/success',
+          cancel_url: 'https://www.fretwang.com/stripe/cancel',
         }),
       });
 
@@ -51,8 +45,8 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({ onClose }) => {
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.checkoutUrl || data.url) {
+        window.location.href = data.checkoutUrl || data.url;
       } else {
         throw new Error('No checkout URL received');
       }
@@ -75,7 +69,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({ onClose }) => {
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
-              ✕
+              <X className="w-5 h-5 text-gray-500" />
             </button>
           )}
         </div>

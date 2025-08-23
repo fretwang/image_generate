@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCredit } from '../contexts/CreditContext';
-import { createClient } from '@supabase/supabase-js';
 import { Coins, CreditCard, Smartphone, Globe, User as UserIcon, History, TrendingUp } from 'lucide-react';
 import RechargeModal from './RechargeModal';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-);
 
 interface ProfileProps {
   onNavigate: (page: 'home' | 'generate' | 'gallery' | 'profile') => void;
@@ -18,30 +12,6 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const { credits, transactions } = useCredit();
   const [showRechargeModal, setShowRechargeModal] = useState(false);
-  const [subscription, setSubscription] = useState<any>(null);
-
-  React.useEffect(() => {
-    const fetchSubscription = async () => {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('stripe_user_subscriptions')
-          .select('*')
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error fetching subscription:', error);
-        } else if (data) {
-          setSubscription(data);
-        }
-      } catch (error) {
-        console.error('Error fetching subscription:', error);
-      }
-    };
-
-    fetchSubscription();
-  }, [user]);
 
   const totalRecharged = transactions
     .filter(t => t.type === 'recharge')
@@ -110,30 +80,6 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* Subscription Status */}
-        {subscription && (
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-6">
-            <h3 className="font-medium text-gray-800 mb-2">Subscription Status</h3>
-            <div className="text-sm text-gray-600">
-              <div className="flex justify-between items-center">
-                <span>Status:</span>
-                <span className={`font-medium capitalize ${
-                  subscription.subscription_status === 'active' ? 'text-green-600' : 'text-gray-600'
-                }`}>
-                  {subscription.subscription_status?.replace('_', ' ') || 'No active subscription'}
-                </span>
-              </div>
-              {subscription.current_period_end && (
-                <div className="flex justify-between items-center mt-1">
-                  <span>Next billing:</span>
-                  <span className="font-medium">
-                    {new Date(subscription.current_period_end * 1000).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Quick Recharge Options */}
