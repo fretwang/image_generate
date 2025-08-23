@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Mail, Lock, User, Sparkles, Eye, EyeOff } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
 import VerificationCodeInput from './VerificationCodeInput';
 import ForgotPasswordModal from './ForgotPasswordModal';
 
 const Login: React.FC = () => {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<'login' | 'register' | 'verify' | 'unverified'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,11 +24,11 @@ const Login: React.FC = () => {
 
   const validatePasswords = () => {
     if (mode === 'register' && password !== confirmPassword) {
-      setPasswordError('两次输入的密码不一致');
+      setPasswordError(t.login.passwordMismatch);
       return false;
     }
     if (mode === 'register' && password.length < 6) {
-      setPasswordError('密码长度至少6位');
+      setPasswordError(t.login.passwordTooShort);
       return false;
     }
     setPasswordError('');
@@ -97,8 +99,8 @@ const Login: React.FC = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-4">
               <Mail className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">验证邮箱</h1>
-            <p className="text-gray-600">我们已向 {pendingEmail} 发送验证码</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">{t.login.title}</h1>
+            <p className="text-gray-600">{t.login.subtitle}</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -112,7 +114,7 @@ const Login: React.FC = () => {
               onClick={() => setMode('register')}
               className="w-full mt-4 text-gray-500 hover:text-gray-700 text-sm"
             >
-              返回注册
+              {t.login.backToRegister}
             </button>
             
           </div>
@@ -129,16 +131,16 @@ const Login: React.FC = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-full mb-4">
               <Mail className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">邮箱未验证</h1>
-            <p className="text-gray-600">您的账户已注册，但邮箱尚未验证</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">{t.login.emailNotVerified}</h1>
+            <p className="text-gray-600">{t.login.emailNotVerifiedDescription}</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center space-y-4">
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-yellow-800 font-medium mb-2">账户状态：未验证</p>
+                <p className="text-yellow-800 font-medium mb-2">{t.login.accountStatus}</p>
                 <p className="text-yellow-700 text-sm">
-                  邮箱 <span className="font-medium">{unverifiedEmail}</span> 需要验证后才能登录
+                  {t.login.email} <span className="font-medium">{unverifiedEmail}</span> {t.login.emailNeedsVerification}
                 </p>
               </div>
 
@@ -148,20 +150,22 @@ const Login: React.FC = () => {
                   disabled={isLoading}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? '发送中...' : '重新发送验证邮件'}
+                  {isLoading ? t.login.sending : t.login.resendVerificationEmail}
                 </button>
 
                 <button
                   onClick={() => setMode('login')}
                   className="w-full py-3 text-gray-600 hover:text-gray-800 font-medium"
                 >
-                  返回登录
+                  {t.login.backToLogin}
                 </button>
               </div>
 
               <div className="text-xs text-gray-500 space-y-2">
-                <p>💡 提示：请检查您的邮箱（包括垃圾邮件文件夹）</p>
-                <p>如果仍未收到邮件，请点击上方按钮重新发送</p>
+                <p>💡 {t.login.emailTips}</p>
+                <p>{t.login.checkSpam}</p>
+                <p>{t.login.validFor10Minutes}</p>
+                <p>{t.login.noEmailReceived}</p>
               </div>
             </div>
           </div>
@@ -192,7 +196,7 @@ const Login: React.FC = () => {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              登录
+              {t.login.login}
             </button>
             <button
               type="button"
@@ -203,7 +207,7 @@ const Login: React.FC = () => {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              注册
+              {t.login.register}
             </button>
           </div>
 
@@ -215,7 +219,7 @@ const Login: React.FC = () => {
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">或使用邮箱</span>
+              <span className="px-2 bg-white text-gray-500">{t.login.orUseEmail}</span>
             </div>
           </div>
 
@@ -225,7 +229,7 @@ const Login: React.FC = () => {
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="姓名"
+                  placeholder={t.login.name}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -238,7 +242,7 @@ const Login: React.FC = () => {
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="email"
-                placeholder="邮箱地址"
+                placeholder={t.login.email}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -250,7 +254,7 @@ const Login: React.FC = () => {
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="密码"
+                placeholder={t.login.password}
                 value={password}
                 onChange={(e) => handlePasswordChange(e.target.value)}
                 className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -272,7 +276,7 @@ const Login: React.FC = () => {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="确认密码"
+                  placeholder={t.login.confirmPassword}
                   value={confirmPassword}
                   onChange={(e) => handleConfirmPasswordChange(e.target.value)}
                   className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -304,7 +308,7 @@ const Login: React.FC = () => {
                   onClick={() => setShowForgotPassword(true)}
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
-                  忘记密码？
+                  {t.login.forgotPassword}
                 </button>
               </div>
             )}
@@ -314,12 +318,12 @@ const Login: React.FC = () => {
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {isLoading ? '处理中...' : (mode === 'login' ? '登录' : '注册')}
+              {isLoading ? t.login.processing : (mode === 'login' ? t.login.login : t.login.register)}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            请使用真实邮箱注册以接收验证码
+            {t.login.useRealEmail}
           </div>
         </div>
       </div>

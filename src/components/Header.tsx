@@ -1,7 +1,8 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCredit } from '../contexts/CreditContext';
-import { Sparkles, Home, ImageIcon, GalleryVertical as Gallery, User as UserIcon, LogOut, Coins, Bug } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { Sparkles, Home, ImageIcon, GalleryVertical as Gallery, User as UserIcon, LogOut, Coins, Bug, Mail, Globe } from 'lucide-react';
 import DebugLogs from './DebugLogs';
 
 interface HeaderProps {
@@ -12,13 +13,14 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const { user, logout } = useAuth();
   const { credits } = useCredit();
+  const { language, setLanguage, t } = useLanguage();
   const [showDebugLogs, setShowDebugLogs] = React.useState(false);
 
   const navItems = [
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'generate', icon: ImageIcon, label: 'Generate' },
-    { id: 'gallery', icon: Gallery, label: 'Gallery' },
-    { id: 'profile', icon: UserIcon, label: 'Profile' },
+    { id: 'home', icon: Home, label: t.header.home },
+    { id: 'generate', icon: ImageIcon, label: t.header.generate },
+    { id: 'gallery', icon: Gallery, label: t.header.gallery },
+    { id: 'profile', icon: UserIcon, label: t.header.profile },
   ];
 
   return (
@@ -29,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
             <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-gray-800">AI Art Studio</h1>
+            <h1 className="text-xl font-bold text-gray-800">{t.login.title}</h1>
           </div>
 
           <nav className="hidden md:flex items-center space-x-6">
@@ -57,9 +59,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
 
             <div className="flex items-center space-x-3">
               <button
+                onClick={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
+                className="text-gray-500 hover:text-blue-600 transition-colors"
+                title={t.header.contact}
+              >
+                <Globe className="w-5 h-5" />
+              </button>
+              <button
                 onClick={() => setShowDebugLogs(true)}
                 className="text-gray-500 hover:text-blue-600 transition-colors"
-                title="查看系统日志"
+                title={t.debug.title}
               >
                 <Bug className="w-5 h-5" />
               </button>
@@ -74,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
               <button
                 onClick={logout}
                 className="text-gray-500 hover:text-red-600 transition-colors"
-                title="Sign out"
+                title={t.header.signOut}
               >
                 <LogOut className="w-5 h-5" />
               </button>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { CreditProvider } from './contexts/CreditContext';
 import { ImageProvider } from './contexts/ImageContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import Header from './components/Header';
 import Login from './components/Login';
 import Home from './components/Home';
@@ -96,13 +97,15 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <CreditProvider>
-        <ImageProvider>
-          <AppContent />
-        </ImageProvider>
-      </CreditProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <CreditProvider>
+          <ImageProvider>
+            <AppContent />
+          </ImageProvider>
+        </CreditProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 
