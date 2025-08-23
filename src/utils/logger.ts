@@ -103,6 +103,26 @@ class Logger {
   logApiError(method: string, url: string, error: any) {
     this.error(`API Error: ${method} ${url}`, error);
   }
+
+  // 翻译系统专用日志方法
+  logTranslationMissing(language: string, path: string, fallback: string) {
+    this.warn(`Translation Missing [${language}]: ${path}`, { 
+      language, 
+      path, 
+      fallback,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  logTranslationError(language: string, path: string, error: any, fallback: string) {
+    this.error(`Translation Error [${language}]: ${path}`, { 
+      language, 
+      path, 
+      error: error instanceof Error ? error.message : error,
+      fallback,
+      timestamp: new Date().toISOString()
+    });
+  }
 }
 
 // 创建全局日志实例

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { logger } from '../utils/logger';
 
 export type Language = 'zh' | 'en';
 
@@ -781,10 +782,100 @@ const translations: Record<Language, Translations> = {
   },
 };
 
+// 翻译回退函数
+const getTranslationWithFallback = (
+  translations: Translations,
+  path: string,
+  fallback: string,
+  language: Language
+): string => {
+  try {
+    const keys = path.split('.');
+    let current: any = translations;
+    
+    for (const key of keys) {
+      if (current && typeof current === 'object' && key in current) {
+        current = current[key];
+      } else {
+        // 翻译路径不存在，记录警告并返回回退文字
+        logger.warn(`翻译缺失 [${language}]: ${path}`, { 
+          path, 
+          fallback, 
+          language,
+          availableKeys: current ? Object.keys(current) : 'undefined'
+        });
+        console.warn(`[Translation Missing] Language: ${language}, Path: ${path}, Fallback: "${fallback}"`);
+        return fallback;
+      }
+    }
+    
+    if (typeof current === 'string') {
+      return current;
+    } else {
+      // 找到的不是字符串，记录警告并返回回退文字
+      logger.warn(`翻译类型错误 [${language}]: ${path}`, { 
+        path, 
+        fallback, 
+        language,
+        foundType: typeof current,
+        foundValue: current
+      });
+      console.warn(`[Translation Type Error] Language: ${language}, Path: ${path}, Expected: string, Found: ${typeof current}, Fallback: "${fallback}"`);
+      return fallback;
+    }
+  } catch (error) {
+    // 翻译获取过程中出错，记录错误并返回回退文字
+    logger.error(`翻译获取错误 [${language}]: ${path}`, { 
+      path, 
+      fallback, 
+      language,
+      error: error instanceof Error ? error.message : error
+    });
+    console.warn(`[Translation Error] Language: ${language}, Path: ${path}, Error: ${error}, Fallback: "${fallback}"`);
+    return fallback;
+  }
+};
+
+// 创建带有回退机制的翻译代理对象
+const createTranslationProxy = (translations: Translations, language: Language): Translations => {
+  const createProxy = (obj: any, currentPath: string = ''): any => {
+    return new Proxy(obj, {
+      get(target, prop) {
+        if (typeof prop !== 'string') return target[prop];
+        
+        const newPath = currentPath ? `${currentPath}.${prop}` : prop;
+        const value = target[prop];
+        
+        if (value === undefined) {
+          // 属性不存在，返回路径作为回退文字
+          const fallback = newPath.split('.').pop() || newPath;
+          logger.warn(`翻译属性缺失 [${language}]: ${newPath}`, { 
+            path: newPath, 
+            fallback, 
+            language,
+            availableProps: Object.keys(target)
+          });
+          console.warn(`[Translation Property Missing] Language: ${language}, Path: ${newPath}, Fallback: "${fallback}"`);
+          return fallback;
+        }
+        
+        if (typeof value === 'object' && value !== null) {
+          return createProxy(value, newPath);
+        }
+        
+        return value;
+      }
+    });
+  };
+  
+  return createProxy(translations);
+};
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: Translations;
+  getTranslation: (path: string, fallback?: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -806,13 +897,24 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang);
     localStorage.setItem('language', lang);
+    logger.info(`语言切换到: ${lang}`, { language: lang });
   };
+
+  // 获取翻译的辅助函数
+  const getTranslation = (path: string, fallback?: string): string => {
+    const actualFallback = fallback || path.split('.').pop() || path;
+    return getTranslationWithFallback(translations[language], path, actualFallback, language);
+  };
+
+  // 创建带有回退机制的翻译对象
+  const translationProxy = createTranslationProxy(translations[language], language);
 
   return (
     <LanguageContext.Provider value={{ 
       language, 
       setLanguage: handleSetLanguage, 
-      t: translations[language] 
+      t: translationProxy,
+      getTranslation
     }}>
       {children}
     </LanguageContext.Provider>
