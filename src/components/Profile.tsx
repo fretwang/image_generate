@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCredit } from '../contexts/CreditContext';
+import { createClient } from '@supabase/supabase-js';
 import { Coins, CreditCard, Smartphone, Globe, User as UserIcon, History, TrendingUp } from 'lucide-react';
 import RechargeModal from './RechargeModal';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_ANON_KEY!
+);
 
 interface ProfileProps {
   onNavigate: (page: 'home' | 'generate' | 'gallery' | 'profile') => void;
@@ -12,6 +18,30 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const { credits, transactions } = useCredit();
   const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
+
+  React.useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('stripe_user_subscriptions')
+          .select('*')
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching subscription:', error);
+        } else if (data) {
+          setSubscription(data);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      }
+    };
+
+    fetchSubscription();
+  }, [user]);
 
   const totalRecharged = transactions
     .filter(t => t.type === 'recharge')
@@ -79,42 +109,42 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             <div className="text-sm text-red-600">Credits Used</div>
           </div>
         </div>
+
+        {/* Subscription Status */}
+        {subscription && (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-6">
+            <h3 className="font-medium text-gray-800 mb-2">Subscription Status</h3>
+            <div className="text-sm text-gray-600">
+              <div className="flex justify-between items-center">
+                <span>Status:</span>
+                <span className={`font-medium capitalize ${
+                  subscription.subscription_status === 'active' ? 'text-green-600' : 'text-gray-600'
+                }`}>
+                  {subscription.subscription_status?.replace('_', ' ') || 'No active subscription'}
+                </span>
+              </div>
+              {subscription.current_period_end && (
+                <div className="flex justify-between items-center mt-1">
+                  <span>Next billing:</span>
+                  <span className="font-medium">
+                    {new Date(subscription.current_period_end * 1000).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Quick Recharge Options */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Quick Recharge</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { amount: 10, credits: 100, popular: false },
-            { amount: 20, credits: 200, popular: true },
-            { amount: 50, credits: 500, popular: false },
-            { amount: 100, credits: 1000, popular: false },
-          ].map((option) => (
-            <button
-              key={option.amount}
-              onClick={() => setShowRechargeModal(true)}
-              className={`relative p-4 rounded-xl border-2 text-center transition-all hover:scale-105 ${
-                option.popular
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {option.popular && (
-                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                    Popular
-                  </span>
-                </div>
-              )}
-              <div className="text-2xl font-bold text-gray-800">¥{option.amount}</div>
-              <div className="text-sm text-gray-600">{option.credits} credits</div>
-              <div className="text-xs text-gray-500 mt-1">
-                {Math.floor(option.credits / 10)} generations
-              </div>
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setShowRechargeModal(true)}
+          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+        >
+          Purchase Credits with Stripe
+        </button>
       </div>
 
       {/* Transaction History */}

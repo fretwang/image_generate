@@ -9,10 +9,11 @@ import Home from './components/Home';
 import Generate from './components/Generate';
 import Gallery from './components/Gallery';
 import Profile from './components/Profile';
+import SuccessPage from './components/SuccessPage';
 import { useAuth } from './contexts/AuthContext';
 import GoogleAuthCallback from './components/GoogleAuthCallback';
 
-type Page = 'home' | 'generate' | 'gallery' | 'profile';
+type Page = 'home' | 'generate' | 'gallery' | 'profile' | 'success';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -21,8 +22,16 @@ function AppContent() {
   // 检查是否是Google OAuth回调
   const urlParams = new URLSearchParams(window.location.search);
   const hasAuthCode = urlParams.has('code') && urlParams.has('state');
+  const hasSuccessSession = urlParams.has('session_id');
   // 只有在没有用户登录且有授权码时才显示回调组件
   const isGoogleCallback = hasAuthCode && !user;
+
+  // Check if this is a success page
+  React.useEffect(() => {
+    if (hasSuccessSession && user) {
+      setCurrentPage('success');
+    }
+  }, [hasSuccessSession, user]);
 
   React.useEffect(() => {
     console.log('App routing check:', {
@@ -80,6 +89,8 @@ function AppContent() {
         return <Gallery onNavigate={setCurrentPage} />;
       case 'profile':
         return <Profile onNavigate={setCurrentPage} />;
+      case 'success':
+        return <SuccessPage onNavigate={setCurrentPage} />;
       default:
         return <Home onNavigate={setCurrentPage} />;
     }
@@ -87,7 +98,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <Header currentPage={currentPage} onNavigate={setCurrentPage} />
+      {currentPage !== 'success' && (
+        <Header currentPage={currentPage} onNavigate={setCurrentPage} />
+      )}
       <main className="container mx-auto px-4 py-6 max-w-6xl">
         {renderPage()}
       </main>
