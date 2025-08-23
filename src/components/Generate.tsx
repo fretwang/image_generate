@@ -32,6 +32,19 @@ const Generate: React.FC<GenerateProps> = ({ onNavigate }) => {
   const { generateImages, isGenerating } = useImage();
   const { t } = useLanguage();
 
+  // Parse pricing from environment variable
+  const getPricing = () => {
+    const pricingEnv = import.meta.env.VITE_AI_PRICING || '1:10:1张图片,2:18:2张图片,4:28:4张图片,10:60:10张图片';
+    return pricingEnv.split(',').map(pricingStr => {
+      const [count, credits, description] = pricingStr.split(':');
+      return { count: parseInt(count), credits: parseInt(credits), description };
+    });
+  };
+
+  const pricingOptions = getPricing();
+  const selectedPricing = pricingOptions.find(p => p.count === count) || pricingOptions[0];
+  const creditCost = selectedPricing.credits;
+
   // Parse styles from environment variable
   const getStyles = () => {
     const stylesEnv = process.env.REACT_APP_STYLES || 'realistic:Realistic:Photorealistic images,cartoon:Cartoon:Animated style,oil-painting:Oil Painting:Classic art style,3d-render:3D Render:Three-dimensional look,watercolor:Watercolor:Soft flowing colors,cyberpunk:Cyberpunk:Futuristic neon style';
