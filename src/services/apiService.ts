@@ -110,10 +110,9 @@ class ApiService {
   }
 
   async googleLogin(code: string, state: string) {
-    // 防止重复调用的标记
-    const callKey = `google_login_${code.substring(0, 10)}`;
+    // 防止重复调用
+    const callKey = `google_login_${code}`;
     if (sessionStorage.getItem(callKey)) {
-      logger.logApiCall('GET', 'Google OAuth API (跳过重复调用)', { code: code.substring(0, 20) + '...' });
       throw new Error('重复的Google登录请求');
     }
     
